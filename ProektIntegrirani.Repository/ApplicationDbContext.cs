@@ -36,6 +36,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(p => p.Position).HasConversion<string>().HasMaxLength(20);
             entity.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
 
+            // Owned type: stats live in the Players table as Stats_* columns.
+            entity.OwnsOne(p => p.Stats);
+
             entity.HasOne(p => p.Club)
                 .WithMany(c => c.Players)
                 .HasForeignKey(p => p.ClubId)
@@ -97,6 +100,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             entity.HasIndex(pp => new { pp.PlayerId, pp.GameweekId, pp.ModelType }).IsUnique();
             entity.Property(pp => pp.ModelType).HasConversion<string>().HasMaxLength(20);
+            entity.OwnsOne(pp => pp.Breakdown, breakdown => breakdown.Ignore(b => b.Total));
 
             entity.HasOne(pp => pp.Player)
                 .WithMany(p => p.Predictions)

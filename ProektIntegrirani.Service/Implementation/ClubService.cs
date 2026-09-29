@@ -1,0 +1,94 @@
+using ProektIntegrirani.Domain.Dto;
+using ProektIntegrirani.Domain.Exceptions;
+using ProektIntegrirani.Domain.Models;
+using ProektIntegrirani.Repository.Interface;
+using ProektIntegrirani.Service.Interface;
+
+namespace ProektIntegrirani.Service.Implementation;
+
+public class ClubService : IClubService
+{
+    private readonly IRepository<Club> _repository;
+    private readonly IRepository<Player> _playerRepository;
+    private readonly IRepository<Fixture> _fixtureRepository;
+
+    public ClubService(IRepository<Club> repository,
+        IRepository<Player> playerRepository,
+        IRepository<Fixture> fixtureRepository)
+    {
+        _repository = repository;
+        _playerRepository = playerRepository;
+        _fixtureRepository = fixtureRepository;
+    }
+
+    public async Task<List<Club>> GetAllAsync()
+    {
+        var result = await _repository.GetAllAsync(
+            selector: x => x,
+            orderBy: x => x.OrderBy(c => c.Name));
+        return result.ToList();
+    }
+
+    public async Task<Club> GetByIdAsync(Guid id)
+    {
+        return await _repository.GetAsync(
+                   selector: x => x,
+                   predicate: x => x.Id == id)
+               ?? throw new NotFoundException(nameof(Club), id);
+    }
+
+    public async Task<Club> InsertAsync(ClubDto dto)
+    {
+        await EnsureFplIdIsFreeAsync(dto.FplId);
+
+        var club = new Club();
+        Apply(club, dto);
+        return await _repository.InsertAsync(club);
+    }
+
+    public async Task<Club> UpdateAsync(Guid id, ClubDto dto)
+    {
+        var club = await GetByIdAsync(id);
+        if (club.FplId != dto.FplId)
+        {
+            await EnsureFplIdIsFreeAsync(dto.FplId);
+        }
+
+        Apply(club, dto);
+        return await _repository.UpdateAsync(club);
+    }
+
+    public async Task<Club> DeleteAsync(Guid id)
+    {
+        var club = await GetByIdAsync(id);
+
+        if (await _playerRepository.ExistsAsync(p => p.ClubId == id))
+        {
+            throw new BusinessRuleException($"Club {club.Name} still has players and cannot be deleted.");
+        }
+
+        if (await _fixtureRepository.ExistsAsync(f => f.HomeClubId == id || f.AwayClubId == id))
+        {
+            throw new BusinessRuleException($"Club {club.Name} still has fixtures and cannot be deleted.");
+        }
+
+        return await _repository.DeleteAsync(club);
+    }
+
+    private async Task EnsureFplIdIsFreeAsync(int fplId)
+    {
+        if (await _repository.ExistsAsync(c => c.FplId == fplId))
+        {
+            throw new BusinessRuleException($"A club with FPL id {fplId} already exists.");
+        }
+    }
+
+    private static void Apply(Club club, ClubDto dto)
+    {
+        club.FplId = dto.FplId;
+        club.Name = dto.Name;
+        club.ShortName = dto.ShortName;
+        club.StrengthHome = dto.StrengthHome;
+        club.StrengthAway = dto.StrengthAway;
+    }
+}

@@ -1,10 +1,8 @@
-using ProektIntegrirani.Domain.Common;
 using ProektIntegrirani.Domain.Enums;
-using ProektIntegrirani.Domain.ValueObjects;
 
-namespace ProektIntegrirani.Domain.Models;
+namespace ProektIntegrirani.Domain.Dto;
 
-public class Player : BaseEntity
+public class PlayerDto
 {
     public int FplId { get; set; }
     public string FirstName { get; set; } = string.Empty;
@@ -15,11 +13,5 @@ public class Player : BaseEntity
     public PlayerStatus Status { get; set; }
     public int? ChanceOfPlaying { get; set; }
     public string? News { get; set; }
-    public PlayerSeasonStats Stats { get; set; } = new();
-
     public Guid ClubId { get; set; }
-    public virtual Club Club { get; set; } = null!;
-
-    public virtual ICollection<SquadPick> SquadPicks { get; set; } = new List<SquadPick>();
-    public virtual ICollection<PlayerPrediction> Predictions { get; set; } = new List<PlayerPrediction>();
 }
