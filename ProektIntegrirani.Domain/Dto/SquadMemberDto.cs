@@ -12,6 +12,8 @@ public class SquadMemberDto
     public string ClubShortName { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public PlayerStatus Status { get; set; }
+    public int? ChanceOfPlaying { get; set; }
+    public string? News { get; set; }
     public int SquadPosition { get; set; }
     public bool IsCaptain { get; set; }
     public bool IsViceCaptain { get; set; }

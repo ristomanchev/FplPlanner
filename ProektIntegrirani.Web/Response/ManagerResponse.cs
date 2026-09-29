@@ -7,4 +7,5 @@ public record ManagerResponse(
     string ManagerName,
     string? Email,
     decimal Bank,
-    int FreeTransfers);
+    int FreeTransfers,
+    int? LastReportedGameweek);

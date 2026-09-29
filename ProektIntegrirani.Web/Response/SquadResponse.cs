@@ -16,6 +16,8 @@ public record SquadMemberResponse(
     string ClubShortName,
     decimal Price,
     string Status,
+    int? ChanceOfPlaying,
+    string? News,
     int SquadPosition,
     bool IsCaptain,
     bool IsViceCaptain,

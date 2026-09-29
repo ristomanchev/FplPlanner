@@ -10,7 +10,7 @@ public static class ManagerExtensions
     public static ManagerResponse ToResponse(this Manager manager)
     {
         return new ManagerResponse(manager.Id, manager.FplEntryId, manager.TeamName, manager.ManagerName,
-            manager.Email, manager.Bank, manager.FreeTransfers);
+            manager.Email, manager.Bank, manager.FreeTransfers, manager.LastReportedGameweek);
     }
 
     public static List<ManagerResponse> ToResponse(this IEnumerable<Manager> managers)

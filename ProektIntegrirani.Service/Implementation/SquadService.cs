@@ -248,6 +248,8 @@ public class SquadService : ISquadService
             ClubShortName = player.Club.ShortName,
             Price = player.Price,
             Status = player.Status,
+            ChanceOfPlaying = player.ChanceOfPlaying,
+            News = player.News,
             SquadPosition = squadPosition,
             IsCaptain = isCaptain,
             IsViceCaptain = isViceCaptain

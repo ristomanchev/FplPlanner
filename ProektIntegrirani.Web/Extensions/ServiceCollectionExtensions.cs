@@ -31,6 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFplManagerImportService, FplManagerImportService>();
         services.AddScoped<IPredictionService, PredictionService>();
         services.AddScoped<ISquadService, SquadService>();
+        services.AddScoped<IWeeklyReportService, WeeklyReportService>();
         return services;
     }
 
@@ -45,6 +46,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<PlayerPredictionMapper>();
         services.AddScoped<EtlMapper>();
         services.AddScoped<SquadMapper>();
+        services.AddScoped<ReportMapper>();
         return services;
     }
 
@@ -70,6 +72,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RabbitMqConnectionProvider>();
         services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
         services.AddHostedService<PredictionRecalculationConsumer>();
+        return services;
+    }
+
+    public static IServiceCollection AddEmail(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddHostedService<WeeklyReportBackgroundService>();
         return services;
     }
 }

@@ -18,7 +18,8 @@ builder.Services
     .AddApplicationServices()
     .AddMappers()
     .AddFplIntegration(builder.Configuration)
-    .AddMessaging(builder.Configuration);
+    .AddMessaging(builder.Configuration)
+    .AddEmail(builder.Configuration);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

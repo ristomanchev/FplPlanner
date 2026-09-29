@@ -11,5 +11,8 @@ public class Manager : BaseEntity
     public decimal Bank { get; set; }
     public int FreeTransfers { get; set; }
 
+    // Last gameweek the weekly report was e-mailed for; prevents duplicate reports.
+    public int? LastReportedGameweek { get; set; }
+
     public virtual ICollection<SquadPick> SquadPicks { get; set; } = new List<SquadPick>();
 }

@@ -28,6 +28,8 @@ public static class SquadExtensions
             member.ClubShortName,
             member.Price,
             member.Status.ToString(),
+            member.ChanceOfPlaying,
+            member.News,
             member.SquadPosition,
             member.IsCaptain,
             member.IsViceCaptain,
