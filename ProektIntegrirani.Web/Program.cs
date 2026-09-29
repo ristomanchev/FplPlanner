@@ -16,7 +16,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services
     .AddRepositories()
     .AddApplicationServices()
-    .AddMappers();
+    .AddMappers()
+    .AddFplIntegration(builder.Configuration);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

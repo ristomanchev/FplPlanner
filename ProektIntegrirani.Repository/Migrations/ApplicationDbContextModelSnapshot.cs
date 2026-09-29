@@ -47,7 +47,7 @@ namespace ProektIntegrirani.Repository.Migrations
                     b.HasIndex("FplId")
                         .IsUnique();
 
-                    b.ToTable("Clubs");
+                    b.ToTable("Clubs", (string)null);
                 });
 
             modelBuilder.Entity("ProektIntegrirani.Domain.Models.Fixture", b =>
@@ -91,7 +91,7 @@ namespace ProektIntegrirani.Repository.Migrations
 
                     b.HasIndex("HomeClubId");
 
-                    b.ToTable("Fixtures");
+                    b.ToTable("Fixtures", (string)null);
                 });
 
             modelBuilder.Entity("ProektIntegrirani.Domain.Models.Gameweek", b =>
@@ -114,7 +114,7 @@ namespace ProektIntegrirani.Repository.Migrations
                     b.HasIndex("Number")
                         .IsUnique();
 
-                    b.ToTable("Gameweeks");
+                    b.ToTable("Gameweeks", (string)null);
                 });
 
             modelBuilder.Entity("ProektIntegrirani.Domain.Models.Manager", b =>
@@ -148,7 +148,7 @@ namespace ProektIntegrirani.Repository.Migrations
                     b.HasIndex("FplEntryId")
                         .IsUnique();
 
-                    b.ToTable("Managers");
+                    b.ToTable("Managers", (string)null);
                 });
 
             modelBuilder.Entity("ProektIntegrirani.Domain.Models.Player", b =>
@@ -201,7 +201,7 @@ namespace ProektIntegrirani.Repository.Migrations
                     b.HasIndex("FplId")
                         .IsUnique();
 
-                    b.ToTable("Players");
+                    b.ToTable("Players", (string)null);
                 });
 
             modelBuilder.Entity("ProektIntegrirani.Domain.Models.PlayerPrediction", b =>
@@ -237,7 +237,7 @@ namespace ProektIntegrirani.Repository.Migrations
                     b.HasIndex("PlayerId", "GameweekId", "ModelType")
                         .IsUnique();
 
-                    b.ToTable("PlayerPredictions");
+                    b.ToTable("PlayerPredictions", (string)null);
                 });
 
             modelBuilder.Entity("ProektIntegrirani.Domain.Models.SquadPick", b =>
@@ -273,7 +273,7 @@ namespace ProektIntegrirani.Repository.Migrations
                     b.HasIndex("ManagerId", "GameweekId", "PlayerId")
                         .IsUnique();
 
-                    b.ToTable("SquadPicks");
+                    b.ToTable("SquadPicks", (string)null);
                 });
 
             modelBuilder.Entity("ProektIntegrirani.Domain.Models.Fixture", b =>
@@ -353,7 +353,7 @@ namespace ProektIntegrirani.Repository.Migrations
 
                             b1.HasKey("PlayerId");
 
-                            b1.ToTable("Players");
+                            b1.ToTable("Players", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PlayerId");
@@ -413,7 +413,7 @@ namespace ProektIntegrirani.Repository.Migrations
 
                             b1.HasKey("PlayerPredictionId");
 
-                            b1.ToTable("PlayerPredictions");
+                            b1.ToTable("PlayerPredictions", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("PlayerPredictionId");

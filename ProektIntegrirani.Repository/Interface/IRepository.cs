@@ -10,7 +10,9 @@ public interface IRepository<T> where T : BaseEntity
     Task<T> InsertAsync(T entity);
     Task<ICollection<T>> InsertManyAsync(ICollection<T> entities);
     Task<T> UpdateAsync(T entity);
+    Task<ICollection<T>> UpdateManyAsync(ICollection<T> entities);
     Task<T> DeleteAsync(T entity);
+    Task DeleteManyAsync(ICollection<T> entities);
 
     Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
 

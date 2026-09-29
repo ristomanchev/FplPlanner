@@ -46,4 +46,12 @@ public class ManagersController : ControllerBase
     {
         return Ok(await _managerMapper.DeleteAsync(id));
     }
+
+    // Creates/updates the manager from the FPL API and imports their current squad.
+    [HttpPost("import")]
+    public async Task<ActionResult<ManagerResponse>> ImportFromFpl([FromBody] ManagerImportRequest request,
+        CancellationToken cancellationToken)
+    {
+        return Ok(await _managerMapper.ImportFromFplAsync(request, cancellationToken));
+    }
 }

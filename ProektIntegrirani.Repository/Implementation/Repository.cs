@@ -39,11 +39,24 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
         return entity;
     }
 
+    public async Task<ICollection<T>> UpdateManyAsync(ICollection<T> entities)
+    {
+        _entities.UpdateRange(entities);
+        await _context.SaveChangesAsync();
+        return entities;
+    }
+
     public async Task<T> DeleteAsync(T entity)
     {
         _entities.Remove(entity);
         await _context.SaveChangesAsync();
         return entity;
+    }
+
+    public async Task DeleteManyAsync(ICollection<T> entities)
+    {
+        _entities.RemoveRange(entities);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)

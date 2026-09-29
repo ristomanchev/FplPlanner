@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProektIntegrirani.Domain.Models;
+using ProektIntegrirani.Repository.Converters;
 
 namespace ProektIntegrirani.Repository;
 
@@ -17,6 +18,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         // SQLite has no native decimal type: EF stores it as TEXT and cannot ORDER BY or SUM it.
         configurationBuilder.Properties<decimal>().HaveConversion<double>();
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
