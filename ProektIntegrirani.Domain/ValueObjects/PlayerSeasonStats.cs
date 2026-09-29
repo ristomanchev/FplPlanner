@@ -16,4 +16,7 @@ public class PlayerSeasonStats
     public int Bonus { get; set; }
     public int YellowCards { get; set; }
     public int DefensiveContribution { get; set; }
+
+    // Set when the player joined the club during the season (the stats above then cover fewer team games).
+    public DateOnly? ClubJoinDate { get; set; }
 }

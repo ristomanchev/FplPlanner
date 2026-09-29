@@ -29,6 +29,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPlayerPredictionService, PlayerPredictionService>();
         services.AddScoped<IFplEtlService, FplEtlService>();
         services.AddScoped<IFplManagerImportService, FplManagerImportService>();
+        services.AddScoped<IPredictionService, PredictionService>();
+        services.AddScoped<ISquadService, SquadService>();
         return services;
     }
 
@@ -42,6 +44,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SquadPickMapper>();
         services.AddScoped<PlayerPredictionMapper>();
         services.AddScoped<EtlMapper>();
+        services.AddScoped<SquadMapper>();
         return services;
     }
 

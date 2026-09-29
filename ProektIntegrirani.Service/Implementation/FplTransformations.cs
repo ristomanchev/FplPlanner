@@ -65,7 +65,8 @@ public static class FplTransformations
             Saves = element.Saves,
             Bonus = element.Bonus,
             YellowCards = element.YellowCards,
-            DefensiveContribution = element.DefensiveContribution
+            DefensiveContribution = element.DefensiveContribution,
+            ClubJoinDate = element.TeamJoinDate
         };
     }
 }

@@ -53,4 +53,5 @@ public class FplElement
     [JsonPropertyName("bonus")] public int Bonus { get; set; }
     [JsonPropertyName("yellow_cards")] public int YellowCards { get; set; }
     [JsonPropertyName("defensive_contribution")] public int DefensiveContribution { get; set; }
+    [JsonPropertyName("team_join_date")] public DateOnly? TeamJoinDate { get; set; }
 }

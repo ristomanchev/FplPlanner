@@ -40,18 +40,25 @@ public class GlobalExceptionHandler : IExceptionHandler
             ? exception.Message
             : null;
 
+        var problemDetails = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = title,
+            Detail = detail
+        };
+
+        if (exception is SquadValidationException squadValidation)
+        {
+            problemDetails.Extensions["errors"] = squadValidation.Errors;
+        }
+
         httpContext.Response.StatusCode = statusCode;
 
         return await _problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = statusCode,
-                Title = title,
-                Detail = detail
-            }
+            ProblemDetails = problemDetails
         });
     }
 }

@@ -49,4 +49,12 @@ public class PlayerPredictionsController : ControllerBase
     {
         return Ok(await _playerPredictionMapper.DeleteAsync(id));
     }
+
+    // Runs the Poisson model for the next `horizon` gameweeks (synchronously; the queue consumer does the same after an ETL).
+    [HttpPost("recalculate")]
+    public async Task<ActionResult<PredictionRunResponse>> Recalculate([FromQuery] int horizon = 6,
+        CancellationToken cancellationToken = default)
+    {
+        return Ok(await _playerPredictionMapper.RecalculateAsync(horizon, cancellationToken));
+    }
 }

@@ -8,10 +8,13 @@ namespace ProektIntegrirani.Web.Mapper;
 public class PlayerPredictionMapper
 {
     private readonly IPlayerPredictionService _playerPredictionService;
+    private readonly IPredictionService _predictionService;
 
-    public PlayerPredictionMapper(IPlayerPredictionService playerPredictionService)
+    public PlayerPredictionMapper(IPlayerPredictionService playerPredictionService,
+        IPredictionService predictionService)
     {
         _playerPredictionService = playerPredictionService;
+        _predictionService = predictionService;
     }
 
     public async Task<PaginatedResponse<PlayerPredictionResponse>> GetAllPagedAsync(
@@ -43,6 +46,12 @@ public class PlayerPredictionMapper
     public async Task<PlayerPredictionResponse> DeleteAsync(Guid id)
     {
         var result = await _playerPredictionService.DeleteAsync(id);
+        return result.ToResponse();
+    }
+
+    public async Task<PredictionRunResponse> RecalculateAsync(int horizon, CancellationToken cancellationToken)
+    {
+        var result = await _predictionService.RecalculateAsync(horizon, cancellationToken);
         return result.ToResponse();
     }
 }
