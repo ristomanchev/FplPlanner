@@ -63,4 +63,13 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<FplSyncBackgroundService>();
         return services;
     }
+
+    public static IServiceCollection AddMessaging(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<RabbitMqSettings>(configuration.GetSection(RabbitMqSettings.SectionName));
+        services.AddSingleton<RabbitMqConnectionProvider>();
+        services.AddSingleton<IMessagePublisher, RabbitMqMessagePublisher>();
+        services.AddHostedService<PredictionRecalculationConsumer>();
+        return services;
+    }
 }

@@ -29,7 +29,7 @@ public class FixtureService : IFixtureService
             predicate: f => (gameweekNumber == null || f.Gameweek != null && f.Gameweek.Number == gameweekNumber)
                             && (clubId == null || f.HomeClubId == clubId || f.AwayClubId == clubId),
             orderBy: x => x.OrderBy(f => f.KickoffTime).ThenBy(f => f.FplId),
-            include: x => x.Include(f => f.HomeClub).Include(f => f.AwayClub).Include(f => f.Gameweek));
+            include: x => x.Include(f => f.Gameweek).Include(f => f.HomeClub).Include(f => f.AwayClub));
         return result.ToList();
     }
 
@@ -38,7 +38,7 @@ public class FixtureService : IFixtureService
         return await _repository.GetAsync(
                    selector: x => x,
                    predicate: x => x.Id == id,
-                   include: x => x.Include(f => f.HomeClub).Include(f => f.AwayClub).Include(f => f.Gameweek))
+                   include: x => x.Include(f => f.Gameweek).Include(f => f.HomeClub).Include(f => f.AwayClub))
                ?? throw new NotFoundException(nameof(Fixture), id);
     }
 

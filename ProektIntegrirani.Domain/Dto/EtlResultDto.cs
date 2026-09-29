@@ -10,6 +10,7 @@ public class EtlResultDto
     public int PlayersUpdated { get; set; }
     public int FixturesInserted { get; set; }
     public int FixturesUpdated { get; set; }
+    public bool PredictionRecalculationQueued { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime FinishedAt { get; set; }
 }

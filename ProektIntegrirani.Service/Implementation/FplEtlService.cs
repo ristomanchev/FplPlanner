@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ProektIntegrirani.Domain.Configuration;
 using ProektIntegrirani.Domain.Dto;
 using ProektIntegrirani.Domain.ExternalModels;
+using ProektIntegrirani.Domain.Messages;
 using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Interface;
@@ -14,6 +17,8 @@ public class FplEtlService : IFplEtlService
     private readonly IRepository<Gameweek> _gameweekRepository;
     private readonly IRepository<Player> _playerRepository;
     private readonly IRepository<Fixture> _fixtureRepository;
+    private readonly IMessagePublisher _messagePublisher;
+    private readonly RabbitMqSettings _rabbitMqSettings;
     private readonly ILogger<FplEtlService> _logger;
 
     public FplEtlService(IFplApiClient fplApiClient,
@@ -21,6 +26,8 @@ public class FplEtlService : IFplEtlService
         IRepository<Gameweek> gameweekRepository,
         IRepository<Player> playerRepository,
         IRepository<Fixture> fixtureRepository,
+        IMessagePublisher messagePublisher,
+        IOptions<RabbitMqSettings> rabbitMqSettings,
         ILogger<FplEtlService> logger)
     {
         _fplApiClient = fplApiClient;
@@ -28,6 +35,8 @@ public class FplEtlService : IFplEtlService
         _gameweekRepository = gameweekRepository;
         _playerRepository = playerRepository;
         _fixtureRepository = fixtureRepository;
+        _messagePublisher = messagePublisher;
+        _rabbitMqSettings = rabbitMqSettings.Value;
         _logger = logger;
     }
 
@@ -46,12 +55,31 @@ public class FplEtlService : IFplEtlService
         await UpsertFixturesAsync(fixtures, clubIdsByFplId, gameweekIdsByNumber, result);
 
         result.FinishedAt = DateTime.UtcNow;
+        result.PredictionRecalculationQueued = await TryPublishSyncedMessageAsync(result, cancellationToken);
         _logger.LogInformation(
             "FPL ETL finished: clubs +{ClubsInserted}/~{ClubsUpdated}, players +{PlayersInserted}/~{PlayersUpdated}, fixtures +{FixturesInserted}/~{FixturesUpdated}",
             result.ClubsInserted, result.ClubsUpdated, result.PlayersInserted, result.PlayersUpdated,
             result.FixturesInserted, result.FixturesUpdated);
 
         return result;
+    }
+
+    // The data is already stored, so a broker outage must not fail the ETL; predictions can
+    // still be recalculated manually (POST /api/playerpredictions/recalculate).
+    private async Task<bool> TryPublishSyncedMessageAsync(EtlResultDto result, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var message = new FplDataSyncedMessage(Guid.NewGuid(), result.FinishedAt,
+                result.PlayersInserted + result.PlayersUpdated, result.FixturesInserted + result.FixturesUpdated);
+            await _messagePublisher.PublishAsync(_rabbitMqSettings.FplDataSyncedQueue, message, cancellationToken);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Could not queue prediction recalculation after the ETL.");
+            return false;
+        }
     }
 
     private async Task<Dictionary<int, Guid>> UpsertClubsAsync(List<FplTeam> teams, EtlResultDto result)

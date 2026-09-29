@@ -17,7 +17,8 @@ builder.Services
     .AddRepositories()
     .AddApplicationServices()
     .AddMappers()
-    .AddFplIntegration(builder.Configuration);
+    .AddFplIntegration(builder.Configuration)
+    .AddMessaging(builder.Configuration);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

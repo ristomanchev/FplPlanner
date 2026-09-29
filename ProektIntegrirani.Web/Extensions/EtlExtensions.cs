@@ -12,6 +12,7 @@ public static class EtlExtensions
             new EtlEntityCountResponse(result.GameweeksInserted, result.GameweeksUpdated),
             new EtlEntityCountResponse(result.PlayersInserted, result.PlayersUpdated),
             new EtlEntityCountResponse(result.FixturesInserted, result.FixturesUpdated),
+            result.PredictionRecalculationQueued,
             result.StartedAt,
             Math.Round((result.FinishedAt - result.StartedAt).TotalSeconds, 2));
     }

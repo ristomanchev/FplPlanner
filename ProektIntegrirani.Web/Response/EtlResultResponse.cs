@@ -5,6 +5,7 @@ public record EtlResultResponse(
     EtlEntityCountResponse Gameweeks,
     EtlEntityCountResponse Players,
     EtlEntityCountResponse Fixtures,
+    bool PredictionRecalculationQueued,
     DateTime StartedAt,
     double DurationSeconds);
 
