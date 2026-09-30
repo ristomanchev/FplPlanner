@@ -1,169 +1,258 @@
 # FPL Planner
 
-Backend за Fantasy Premier League 2026/27. Ги презема податоците од јавното FPL API, ги чува во SQLite база и за секој FPL менаџер нуди:
-- валидација на тимот според FPL правилата,
-- очекувани поени по играч и коло (Poisson модел),
-- најдобра постава и капитен,
-- предлози за трансфери.
+Апликација за планирање на тим во **Fantasy Premier League 2026/27**. Ги презема податоците од јавното FPL API, ги чува во сопствена база и на секој FPL менаџер му помага да одлучи:
 
-Проект по предметот Интегрирани системи.
+- дали неговиот тим ги почитува FPL правилата,
+- колку поени може да очекува секој играч во следните кола,
+- кого да стави во првите 11 и кој да биде капитен,
+- кои трансфери вредат (и кога вреди да се земе −4).
+
+Проект по предметот **Интегрирани системи**.
+
+## Содржина
+
+- [Технологии](#технологии)
+- [Стартување](#стартување)
+- [Кориснички интерфејс](#кориснички-интерфејс)
+- [Преглед на API](#преглед-на-api)
+- [Архитектура](#архитектура)
+- [Модели](#модели)
+- [Бизнис логика](#бизнис-логика)
+- [Интеграции](#интеграции)
+- [Одлуки при дизајнот](#одлуки-при-дизајнот)
+- [Ограничувања](#ограничувања)
+
+## Технологии
+
+| | |
+|---|---|
+| Платформа | .NET 10, ASP.NET Core Web API |
+| База | SQLite, Entity Framework Core 10, EFCore.BulkExtensions |
+| Пораки | RabbitMQ (RabbitMQ.Client 7) |
+| Закажани задачи | BackgroundService, Quartz.NET |
+| Email | MailKit (SMTP), Mailpit за локален развој |
+| Excel | ClosedXML |
+| Документација | OpenAPI + Scalar |
+| Тестови | xUnit |
+| UI | HTML, CSS и JavaScript без framework |
 
 ## Стартување
 
-Потребни локални сервиси, еднократно преку Homebrew:
+**Предуслови:** .NET 10 SDK, `dotnet-ef` (`dotnet tool install -g dotnet-ef`) и Homebrew (macOS).
+
+**1. Локални сервиси** (еднократно):
 
 ```bash
 brew install rabbitmq mailpit
-brew services start rabbitmq         # AMQP :5672, UI http://localhost:15672 (guest/guest)
-brew services start mailpit          # SMTP :1025, inbox http://localhost:8025
+brew services start rabbitmq    # AMQP :5672, управување на http://localhost:15672 (guest / guest)
+brew services start mailpit     # SMTP :1025, пораки на http://localhost:8025
 ```
 
-Стартување:
+**2. База и апликација:**
 
 ```bash
 cd ProektIntegrirani.Repository && dotnet ef database update && cd ..
 dotnet run --project ProektIntegrirani.Web --launch-profile http
 ```
 
-Во Development мејловите одат во локалниот Mailpit (`appsettings.Development.json`). За вистински мејлови се пополнуваат Gmail поставките во `EmailSettings` во `appsettings.json` (App Password).
+**3. Адреси:**
 
-- **UI:** http://localhost:5092. Менаџер (тим на терен, капитен, трансфери, извештај, Excel), Играчи (предвидувања), Податоци (ETL, дневник).
-- API документација (Scalar): http://localhost:5092/scalar
-- При старт апликацијата сама ги повлекува податоците од FPL (ETL). Потоа преку RabbitMQ ги пресметува предвидувањата.
-- Тестови: `dotnet test`
+| | |
+|---|---|
+| Кориснички интерфејс | http://localhost:5092 |
+| API документација (Scalar) | http://localhost:5092/scalar |
+| Мејлови (Mailpit) | http://localhost:8025 |
+| RabbitMQ | http://localhost:15672 |
 
-Ако RabbitMQ е недостапен, ETL-от сепак ги зачувува податоците, а предвидувањата се пресметуваат рачно со `POST /api/playerpredictions/recalculate`. Без SMTP сервер не се праќаат мејлови.
+При старт апликацијата сама ги повлекува податоците од FPL. Потоа, преку RabbitMQ, ги пресметува очекуваните поени, па по неколку секунди сè е подготвено.
 
-Брз пример, од нула до предлог за трансфер:
+**Тестови:** `dotnet test`
+
+Во Development мејловите одат во локалниот Mailpit (`appsettings.Development.json`). За вистински мејлови се пополнува секцијата `EmailSettings` во `appsettings.json` со Gmail адреса и App Password. Лозинката не се комитира; се чува локално или со `dotnet user-secrets`.
+
+Апликацијата работи и без RabbitMQ: податоците се зачувуваат, а предвидувањата се пресметуваат рачно со `POST /api/playerpredictions/recalculate`.
+
+## Кориснички интерфејс
+
+Едноставна страница на http://localhost:5092 со три дела:
+
+- **Менаџер:** увоз на FPL менаџер по entry id, неговиот тим и дали е валиден, најдобрата постава нацртана на терен со капитен и вице, предлог трансфери, праќање на неделниот извештај, Excel извоз и увоз на тимот.
+- **Играчи:** табела со очекувани поени за следното коло, по позиција, со детален пресмет и Excel извоз.
+- **Податоци:** рачно повлекување на FPL податоците, пресметка на предвидувањата и дневник на сите ETL извршувања.
+
+## Преглед на API
+
+| Област | Endpoints |
+|---|---|
+| CRUD | `/api/clubs`, `/api/players`, `/api/gameweeks`, `/api/fixtures`, `/api/managers`, `/api/squadpicks`, `/api/playerpredictions`, `/api/apiclients`, `/api/inboundsquadentries` |
+| Тим (бизнис логика) | `GET /api/squads/{managerId}`, `PUT /api/squads/{managerId}/gameweeks/{n}`, `GET .../validation`, `GET .../lineup`, `GET .../transfer-suggestions` |
+| FPL податоци | `POST /api/etl/run`, `GET /api/etl/logs`, `POST /api/managers/import` |
+| Предвидувања | `POST /api/playerpredictions/recalculate?horizon=6` |
+| Извештаи | `GET /api/reports/{managerId}/weekly`, `GET .../weekly/html`, `POST .../weekly/send`, `POST /api/reports/weekly/send-due` |
+| Excel | `GET /api/export/predictions`, `GET /api/export/squads/{managerId}`, `POST /api/import/squads/{managerId}/gameweeks/{n}`, `GET /api/import/squads/get-import-template` |
+| Надворешни системи | `POST /api/external/squads`, `GET /api/external/squads/{id}/status` (header `X-Api-Key`) |
+
+Пример, од нула до предлог за трансфер:
 
 ```
-POST /api/etl/run                                   # клубови, кола, играчи, натпревари
-POST /api/managers/import  {"fplEntryId": 1, "email": "me@example.com"}
-POST /api/playerpredictions/recalculate?horizon=6
-GET  /api/squads/{managerId}/lineup                 # постава + капитен
+POST /api/managers/import   {"fplEntryId": 1, "email": "me@example.com"}
+GET  /api/squads/{managerId}/lineup
 GET  /api/squads/{managerId}/transfer-suggestions?horizon=5&maxTransfers=2
-POST /api/reports/{managerId}/weekly/send           # мејл → http://localhost:8025
-GET  /api/export/predictions                        # .xlsx
+POST /api/reports/{managerId}/weekly/send
 ```
 
-## Архитектура (Onion)
+Сите грешки се враќаат во стандарден формат (ProblemDetails, RFC 7807). Кога има повеќе прекршувања, на пример кај невалиден тим, сите се наведени во `errors`.
+
+## Архитектура
+
+Onion архитектура во четири проекта:
 
 ```
-        ┌──────────────────────────────────────────┐
-        │ Web: Controllers → Mapper → Service      │  HTTP, Request/Response, DI, exception handler
-        │  ┌────────────────────────────────────┐  │
-        │  │ Service: бизнис логика, интеграции │  │  сервиси, Logic (чисти алгоритми), Jobs
-        │  │  ┌──────────────────────────────┐  │  │
-        │  │  │ Repository: EF Core, SQLite  │  │  │  ApplicationDbContext, IRepository<T>
-        │  │  │  ┌────────────────────────┐  │  │  │
-        │  │  │  │ Domain                 │  │  │  │  модели, DTO, enum, правила, исклучоци
-        │  │  │  └────────────────────────┘  │  │  │
-        │  │  └──────────────────────────────┘  │  │
-        │  └────────────────────────────────────┘  │
-        └──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│ Web         Controllers → Mapper → Service       │
+│  ┌────────────────────────────────────────────┐  │
+│  │ Service     бизнис логика, интеграции      │  │
+│  │  ┌──────────────────────────────────────┐  │  │
+│  │  │ Repository  EF Core, SQLite          │  │  │
+│  │  │  ┌────────────────────────────────┐  │  │  │
+│  │  │  │ Domain  модели, правила        │  │  │  │
+│  │  │  └────────────────────────────────┘  │  │  │
+│  │  └──────────────────────────────────────┘  │  │
+│  └────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────┘
 ```
 
-Зависностите одат само кон внатре: Repository → Domain, Service → Domain + Repository, Web → сите три. Domain нема ниту еден NuGet пакет.
+Зависностите одат само кон внатре: Repository → Domain, Service → Domain и Repository, Web → сите три. Domain нема ниту еден NuGet пакет.
 
 | Проект | Содржина |
 |---|---|
-| `Domain` | `Common/BaseEntity`, `Models`, `ValueObjects` (owned types), `Dto`, `Enums`, `ExternalModels` (FPL API), `Messages`, `Configuration`, `Rules` (FPL правила и бодување), `Exceptions` |
-| `Repository` | `ApplicationDbContext` (Fluent API), генерички `IRepository<T>`/`Repository<T>`, `Converters`, `Migrations` |
-| `Service` | `Interface`/`Implementation` сервиси, `Logic` (валидатор, Poisson модел, оптимизатор; без I/O), `Jobs` (background services) |
-| `Web` | `Controllers` (`api/[controller]`), `Mapper` (еден по entity/функционалност), `Request`, `Response`, `Extensions` (`ToResponse`/`ToDto`, DI), `Middlewares` |
-| `Tests` | xUnit тестови за чистата логика |
+| `ProektIntegrirani.Domain` | `Models`, `ValueObjects`, `Dto`, `Enums`, `Rules` (FPL правила и бодување), `Exceptions`, `ExternalModels` (FPL API), `Messages`, `Configuration` |
+| `ProektIntegrirani.Repository` | `ApplicationDbContext` (Fluent API), генерички `IRepository<T>`, `IFplDataRepository` (bulk), `Migrations` |
+| `ProektIntegrirani.Service` | `Interface` / `Implementation` сервиси, `Logic` (алгоритми без база и HTTP), `Jobs` (позадински задачи) |
+| `ProektIntegrirani.Web` | `Controllers`, `Mapper`, `Request`, `Response`, `Extensions`, `Middlewares`, `Interceptor`, `wwwroot` (UI) |
+| `ProektIntegrirani.Tests` | xUnit тестови за логиката |
 
-Тек на едно барање: `Controller` → `Mapper` (Request → DTO) → `Service` (бизнис правила) → `IRepository<T>` → EF Core. Одговорот оди обратно: `Mapper` (entity → Response).
+Тек на едно барање: `Controller` → `Mapper` (Request → DTO) → `Service` (бизнис правила) → `IRepository<T>` → EF Core, а одговорот се враќа преку `Mapper` (entity → Response).
 
 ## Модели
 
 | Entity | Опис |
 |---|---|
-| `Club` | клуб: FplId, име, кратенка, FPL јачина (home/away) |
-| `Player` | играч: позиција, цена, статус, шанса за играње, вести; `Stats` (owned) = сезонска статистика |
-| `Gameweek` | коло 1–38: deadline, завршено |
-| `Fixture` | натпревар: **две FK кон Club** (домаќин/гостин, без cascade), опционално коло |
-| `Manager` | FPL менаџер: entry id, тим, email, банка, слободни трансфери |
-| `ApiClient` | надворешен систем што смее да го повикува `/api/external`: име, SHA-256 hash на API клучот, активен, лимит барања/мин |
-| `InboundSquadEntry` | тим пратен од надворешен систем: суров payload, статус Pending/Processing/Completed/Failed, грешка, FK кон `ApiClient` |
-| `SquadPick` | **тернарна релација Manager × Gameweek × Player**: позиција 1–15 (12–15 клупа), капитен, вице. Unique index на (ManagerId, GameweekId, PlayerId) |
-| `PlayerPrediction` | Player × Gameweek × ModelType: очекувани поени + `Breakdown` (owned) по категорија |
+| `Club` | клуб: FPL id, име, кратенка, јачина дома/гости |
+| `Player` | играч: позиција, цена, статус, шанса за играње, вести и сезонска статистика |
+| `Gameweek` | коло 1–38: рок и дали е завршено |
+| `Fixture` | натпревар: **две врски кон `Club`** (домаќин и гостин), коло, резултат |
+| `Manager` | FPL менаџер: entry id, име на тимот, email, банка, слободни трансфери |
+| `SquadPick` | **тернарна релација Manager × Gameweek × Player**: позиција 1–15 (12–15 се клупа), капитен, вице |
+| `PlayerPrediction` | очекувани поени за Player × Gameweek × модел, со пресмет по категорија |
+| `ApiClient` | надворешен систем со пристап до `/api/external`: API клуч (hash), активен, лимит барања |
+| `InboundSquadEntry` | тим пратен од надворешен систем и неговиот статус на обработка |
+| `EtlSyncLog` | дневник на секое повлекување податоци од FPL |
+
+Уникатноста на тернарната релација ја чува unique index на `(ManagerId, GameweekId, PlayerId)`.
 
 Правила за бришење:
-- Менаџер → неговите picks се бришат (cascade).
-- Играч или коло што е во нечиј тим не може да се избрише (restrict). Сервисот го проверува ова пред бришење и враќа 400 со јасна порака.
-- Предвидувањата се бришат со играчот или колото, бидејќи се изведени податоци.
+
+- Со менаџерот се бришат и неговите тимови.
+- Играч или коло што е во нечиј тим не може да се избрише; апликацијата враќа јасна порака.
+- Предвидувањата се бришат заедно со играчот или колото, бидејќи можат повторно да се пресметаат.
 
 ## Бизнис логика
 
-- **Валидација на тим** (`SquadValidator`):
-  - 15 играчи во составот 2 GK / 5 DEF / 5 MID / 3 FWD,
-  - најмногу 3 од ист клуб,
-  - формација на првите 11: 1 GK, 3–5 DEF, 2–5 MID, 1–3 FWD,
-  - точно еден капитен и еден вице, и двајцата во првите 11,
-  - уникатни играчи и позиции.
+### Валидација на тим
 
-  Се враќаат **сите** прекршувања одеднаш (`ProblemDetails.errors`).
-- **Poisson модел** (`PoissonPredictionModel`):
-  1. Рејтинг за напад/одбрана на тимот од голови и xG, „смалени“ кон приор од FPL јачината.
-  2. λ за постигнати/примени голови по натпревар, со домашна предност.
-  3. Очекувани минути од стартови и статус на повреда.
-  4. Стапки на 90 минути (xG, xA, одбранбени придонеси, одбрани, бонус, картони), смалени кон приор по позиција и цена.
-  5. Поени според FPL бодувањето.
-- **Оптимизатор** (`SquadOptimizer`):
-  - најдобри 11 + капитен (двојно) + 0.1 × клупа,
-  - сите поединечни трансфери што го подобруваат тимот,
-  - greedy планови со 1..N трансфери и −4 за секој трансфер над бесплатните.
+`SquadValidator` ги проверува FPL правилата:
 
-  Дополнителен трансфер со −4 се препорачува само ако нето добивката е поголема за барем 2 поени, бидејќи моделот има шум.
+- 15 играчи: 2 голмани, 5 одбранбени, 5 во среден ред, 3 напаѓачи;
+- најмногу 3 играчи од ист клуб;
+- валидна формација во првите 11: 1 голман, 3–5 одбрана, 2–5 среден ред, 1–3 напад;
+- точно еден капитен и еден вице, и двајцата во првите 11;
+- секој играч и секоја позиција само еднаш.
+
+Се враќаат **сите** прекршувања одеднаш, не само првото. Истите правила важат без разлика дали тимот доаѓа преку API, Excel или од надворешен систем.
+
+### Очекувани поени (Poisson модел)
+
+`PoissonPredictionModel` пресметува очекувани поени за секој играч во секое од следните кола:
+
+1. Јачина во напад и одбрана на секој тим, од постигнатите и примените голови и очекуваните голови (xG). Кога има малку одиграни натпревари, се потпира на FPL оценката за јачина.
+2. Очекувани голови за двата тима на секој натпревар (Poisson распределба), со предност за домаќинот.
+3. Очекувани минути, од стартовите на играчот и статусот на повреда.
+4. Стапки на 90 минути (голови, асистенции, одбранбени акции, одбрани, бонус, картони). Кај играчи со малку минути вредностите се приближуваат кон просекот за нивната позиција и цена.
+5. Поени според официјалното FPL бодување.
+
+### Постава и трансфери
+
+`SquadOptimizer`:
+
+- ги избира најдобрите 11 и капитенот (неговите поени се бројат двојно);
+- ги наоѓа сите поединечни трансфери што го подобруваат тимот, во рамки на буџетот и правилото од 3 играчи по клуб;
+- гради планови со 1, 2 или 3 трансфери, со −4 за секој трансфер над бесплатните.
+
+Дополнителен трансфер со −4 се препорачува само ако добивката е јасно поголема, бидејќи предвидувањата не се точни до децимала.
 
 ## Интеграции
 
-1. **Надворешно API + ETL**:
-   - Extract: `FplApiClient` (typed `HttpClient`) ги влече `bootstrap-static` и `fixtures`.
-   - Transform: `FplTransformations` ги претвора во доменски ентитети: `element_type` → `Position`, `a/d/i/s/u/n` → `PlayerStatus`, `now_cost/10` → цена во милиони. Id-то се добива со `GuidHelper.FromExternalId("Player", fplId)`, па истиот FPL запис секогаш добива исто Id, а FK-ите (`Player.ClubId`, `Fixture.GameweekId`) се пресметуваат без пребарување.
-   - Load: `IFplDataRepository` со `BulkInsertOrUpdate` (EFCore.BulkExtensions), по една операција за секоја табела.
-   - Секое извршување се запишува во `EtlSyncLog` (почеток, крај, успех, грешка, број на записи) во `try/catch/finally`. Дневникот е достапен на `GET /api/etl/logs`.
+### 1. Надворешно API и ETL
 
-   Се извршува при старт и на секои 6 часа (`FplEtlBackgroundService`), или рачно со `POST /api/etl/run` (502 ако FPL API не одговори).
-   Увозот на менаџер ги користи `entry/{id}` и `picks`. Одговорите се кешираат во `IMemoryCache` (`CacheExpirationMinutes`).
-2. **RabbitMQ**: по успешен ETL се праќа `FplDataSyncedMessage` на durable queue. `PredictionRecalculationConsumer` ги пресметува предвидувањата асинхроно. Поставки: prefetch 1, рачен ack, nack без requeue при грешка, една заедничка конекција со automatic recovery.
-3. **Email**: `WeeklyReportService` го составува извештајот (капитен, трансфери, повредени/сомнителни играчи, постава) и го става `EmailMessage` во `IEmailQueue` (`Channel<EmailMessage>`). `EmailBackgroundService` ја чита редицата и праќа преку `SmtpEmailService` (MailKit, `EmailSettings`). Така HTTP барањето не чека SMTP. Извештајот носи и Excel прилог со предвидувањата (`EmailAttachment`). `QuartzWeeklyReportJob` (Quartz, cron на секој час) го става извештајот во редицата 24 ч пред deadline, еднаш по коло (`Manager.LastReportedGameweek`).
-4. **Excel** (ClosedXML):
-   - `ExportController` + `IExcelExportService` (враќа `byte[]`): предвидувања (xP по коло + детален пресмет) и тимот на менаџерот во форматот за увоз.
-   - `ImportController` + `IExcelImportService`: проверка на фајлот (празен, `.xlsx`, до 5 MB), задолжителни колони, проверка на секој ред → `ImportResult<T>` со `ImportError` (ред, колона, порака). Шаблон: `GET /api/import/squads/get-import-template`.
-   - Ако сите редови се валидни, тимот се зачувува преку `ISquadService`, со истите FPL правила како и API-то.
+- **Extract:** `FplApiClient` ги презема `bootstrap-static` (клубови, кола, играчи) и `fixtures`.
+- **Transform:** `FplTransformations` ги претвора во доменски ентитети: кодот за позиција во `Position`, `a/d/i/s/u/n` во статус, цената од десетинки во милиони. Секој запис добива Id пресметано од FPL id-то (`GuidHelper`), па истиот играч секогаш е истиот ред во базата.
+- **Load:** `BulkInsertOrUpdate`, по една операција за секоја табела.
+- Секое извршување се запишува во `EtlSyncLog`: кога, колку записи, успех или грешка.
 
-5. **Inbound REST API**:
-   - Надворешен систем праќа тим со `POST /api/external/squads` и header `X-Api-Key`. Тимот се идентификува со FPL id-ја: `fplEntryId`, `gameweekNumber`, `picks[fplId, squadPosition, isCaptain, isViceCaptain]`.
-   - `ApiKeyAuthMiddleware` го проверува клучот (401 ако недостига или е невалиден). Rate limiter-от `external-api` има посебен прозорец за секој клуч, со лимит од `ApiClient.RequestsPerMinute`. Над лимитот враќа 429.
-   - Барањето само го зачувува payload-от како `InboundSquadEntry` (`Pending`) и враќа **202 Accepted** со id.
-   - `InboundSquadProcessingBackgroundService` на секои 10 секунди го повикува `InboundSquadEntryProcessor`. Тој зема најмногу 10 записи со статус `Pending`, најстарите прво, го наоѓа менаџерот и играчите и го зачувува тимот преку `ISquadService` (истите FPL правила). Резултатот е `Completed` со `ManagerId`, или `Failed` со сите прекршени правила во `ErrorMessage`.
-   - `GET /api/external/squads/{id}/status` го враќа статусот. Клиентот ги гледа само своите записи.
-   - Администрација: CRUD на `/api/apiclients` (клучот се прикажува само при креирање или `regenerate-key`), и `/api/inboundsquadentries` (листа по статус, детали, `retry` за Failed, бришење).
+Се извршува при старт и на секои 6 часа, или рачно. Увозот на менаџер ги користи `entry/{id}` и `picks`; одговорите се кешираат неколку минути (`IMemoryCache`).
+
+### 2. RabbitMQ
+
+По успешно повлекување, ETL-от праќа порака `FplDataSyncedMessage`. `PredictionRecalculationConsumer` ја прима и ги пресметува предвидувањата, па ETL-от не чека на пресметката.
+
+- Редицата и пораките преживуваат рестарт на RabbitMQ.
+- Пораките се обработуваат една по една, со рачна потврда.
+- Ако broker-от падне, врската сама се обновува.
+
+### 3. Email
+
+`WeeklyReportService` составува извештај за менаџерот: предлог капитен, препорачани трансфери, повредени и сомнителни играчи, најдобра постава, и Excel прилог со предвидувањата. Мејлот се става во редица (`IEmailQueue`), а `EmailBackgroundService` го праќа преку SMTP, па барањето не чека на мејл серверот.
+
+Quartz задача на секој час проверува дали рокот за следното коло е за помалку од 24 часа и го праќа извештајот, еднаш по коло за секој менаџер.
+
+### 4. Excel
+
+- **Извоз:** очекувани поени за следните кола со детален пресмет, и тимот на менаџерот.
+- **Увоз на тим:** се проверуваат фајлот (тип, големина), колоните и секој ред. Грешките се враќаат со ред, колона и порака, а валидниот тим минува низ FPL правилата. Извезениот тим е воедно и шаблон за увоз.
+
+### 5. Inbound API за надворешни системи
+
+Друг систем, на пример мобилна апликација, може да прати тим за менаџер:
+
+1. `POST /api/external/squads` со header `X-Api-Key`. Клучот го проверува `ApiKeyAuthMiddleware`, а бројот на барања е ограничен посебно за секој клиент (429 над лимитот).
+2. Барањето само се зачувува со статус `Pending` и веднаш се враќа **202 Accepted**.
+3. Позадинска задача ги обработува записите: `Completed` ако тимот е зачуван, `Failed` со причината ако не е.
+4. Статусот се проверува со `GET /api/external/squads/{id}/status`.
+
+API клучевите се креираат преку `/api/apiclients` и се прикажуваат само еднаш, бидејќи во базата се чува само нивниот hash.
 
 ## Одлуки при дизајнот
 
 | Одлука | Зошто |
 |---|---|
-| Domain без EF/Identity пакети | Onion: јадрото не зависи од базата. Целата конфигурација е Fluent API во `ApplicationDbContext`. |
-| `ExistsAsync`, `UpdateManyAsync`, `DeleteManyAsync`, `GetAsync` (наместо `Get`) | `EXISTS` во SQL наместо вчитување на цел ентитет; batch upsert за ETL; конзистентен `Async` суфикс. |
-| `NotFoundException`/`BusinessRuleException` + `IExceptionHandler` | Контролерите немаат `try/catch`. 404/400 се враќаат во стандарден ProblemDetails формат, наместо 500. |
-| Insert/Update повторно го вчитуваат ентитетот | Навигациите (`Club.ShortName`...) се пополнети за одговорот. |
-| `decimal` → `double` во SQLite, UTC конвертор за `DateTime` | SQLite нема decimal (не може `ORDER BY`) и не чува временска зона. |
-| Enums како string (во базата и во JSON) | Читливо, не зависи од редоследот во enum-от; невалидна вредност → 400. |
-| `BaseAuditableEntity` + `AuditInterceptor` + `ICurrentUser` за `Manager`, `SquadPick`, `ApiClient` | Без кориснички сметки. „Корисникот“ е `api-client:<име>` за надворешни системи, `api` за обични HTTP барања и `system` за background job-ови. `CurrentUser` е во Web, бидејќи го чита `HttpContext`, па Service не зависи од ASP.NET. |
-| Надворешниот клуч (FplId, број на коло, FplEntryId) не може да се менува | Id-то се пресметува од него (`GuidHelper`); ако се смени, CRUD записот и ETL записот би се разминале. |
-| Quartz за неделниот извештај, BackgroundService за ETL/inbound/queue | Quartz кога е потребен cron распоред; `BackgroundService` за континуирани циклуси. |
-| Owned types (`PlayerSeasonStats`, `PointsBreakdown`) | Групирани поврзани полиња без дополнителни табели и JOIN-ови. |
-| `Service/Logic` (статички, без I/O) | Алгоритмите се тестираат без база и HTTP. Сервисите само вчитуваат/зачувуваат околу нив. |
-| API клучевите се чуваат како SHA-256 hash | Како лозинките: ако базата протече, клучевите не се употребливи. Клучот се прикажува само еднаш. |
-| Middleware прави `return` по секој 401 и го користи `IApiClientService` | Невалидно барање никогаш не стига до контролерот. Web слојот не пристапува директно до `DbContext`. |
-| Rate limit по клиент (`RequestsPerMinute`) | Различни партнери можат да имаат различен лимит, наместо еден фиксен број за сите. |
-| Едноставен UI во `wwwroot` (HTML + CSS + JavaScript без framework) | Frontend не е задолжителен, па нема посебен проект ни build чекор. Истата апликација ги служи статичките фајлови, а тие го повикуваат постојното REST API. |
+| Domain без EF пакети | Јадрото не зависи од базата; конфигурацијата е во `ApplicationDbContext` (Fluent API). |
+| Генерички `IRepository<T>` со selector, predicate, orderBy и include | Еден repository за сите ентитети; сервисите бараат само тоа што им треба. |
+| `ExistsAsync`, `UpdateManyAsync`, `DeleteManyAsync`, `take` | Проверка за постоење без вчитување на цел запис, и групни операции. |
+| `NotFoundException` / `BusinessRuleException` и глобален handler | Контролерите немаат `try/catch`; наместо 500 се враќаат 404 или 400 со јасна порака. |
+| По insert/update записот повторно се вчитува | Поврзаните податоци (на пример името на клубот) се достапни за одговорот. |
+| `decimal` се чува како `double`, датумите како UTC | SQLite нема decimal (не може да сортира по цена) и не чува временска зона. |
+| Enum-ите се чуваат како текст | Базата е читлива и не зависи од редоследот во enum-от. |
+| FPL id, бројот на колото и entry id не се менуваат | Id-то на записот се пресметува од нив. |
+| Audit полиња (`BaseAuditableEntity`, `AuditInterceptor`) | Се бележи кој и кога креирал/сменил запис: надворешен клиент, API или позадинска задача. |
+| Quartz за cron, `BackgroundService` за постојани циклуси | Секоја алатка таму каде што одговара. |
+| Алгоритмите се во `Service/Logic`, без база и HTTP | Можат да се тестираат самостојно (40 unit тестови). |
+| API клучевите се чуваат како hash | Ако базата протече, клучевите не можат да се искористат. |
+| API-key middleware прекинува по секој 401 | Невалидно барање никогаш не стига до контролерот. |
+| Едноставен UI во `wwwroot` | Frontend не е задолжителен, па нема посебен проект; страницата го користи истото API. |
 
-## Познати ограничувања
+## Ограничувања
 
-- FPL цената за продажба (купувачка цена + половина од растот) не е јавна, па за трансферите се користи тековната цена.
-- Бројот на слободни трансфери не е во јавното API. Се чува во `Manager.FreeTransfers` (стандардно 1, може да се промени со CRUD).
-- Нема JWT/Identity, бидејќи доменот нема кориснички сметки (менаџерите се FPL тимови). Надворешниот API (`/api/external`) е заштитен со API клуч. Останатите endpoints се за локална администрација и демонстрација.
+- Цената по која FPL продава играч (купувачка цена + половина од растот) не е јавна, па за трансферите се користи тековната цена.
+- Бројот на слободни трансфери не е во јавното API; се чува кај менаџерот (стандардно 1) и може да се промени.
+- Нема најава со кориснички сметки, бидејќи менаџерите се FPL тимови, а не корисници на апликацијата. Надворешното API е заштитено со API клуч.
