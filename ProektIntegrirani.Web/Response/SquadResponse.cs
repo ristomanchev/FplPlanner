@@ -11,6 +11,7 @@ public record SquadResponse(
 
 public record SquadMemberResponse(
     Guid PlayerId,
+    int FplId,
     string WebName,
     string Position,
     string ClubShortName,

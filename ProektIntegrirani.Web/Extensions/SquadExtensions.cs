@@ -23,6 +23,7 @@ public static class SquadExtensions
     {
         return new SquadMemberResponse(
             member.PlayerId,
+            member.FplId,
             member.WebName,
             member.Position.ToString(),
             member.ClubShortName,

@@ -13,6 +13,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Manager> Managers { get; set; }
     public DbSet<SquadPick> SquadPicks { get; set; }
     public DbSet<PlayerPrediction> PlayerPredictions { get; set; }
+    public DbSet<ApiClient> ApiClients { get; set; }
+    public DbSet<InboundSquadEntry> InboundSquadEntries { get; set; }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -113,6 +115,26 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .WithMany(g => g.Predictions)
                 .HasForeignKey(pp => pp.GameweekId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ApiClient>(entity =>
+        {
+            entity.HasIndex(c => c.ApiKeyHash).IsUnique();
+            entity.Property(c => c.Name).HasMaxLength(100);
+            entity.Property(c => c.ApiKeyHash).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<InboundSquadEntry>(entity =>
+        {
+            // The processor looks for Pending entries, oldest first.
+            entity.HasIndex(e => new { e.Status, e.ReceivedAt });
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(20);
+
+            // Keep the inbound log: a client with entries is deactivated, not deleted.
+            entity.HasOne(e => e.ApiClient)
+                .WithMany(c => c.InboundSquadEntries)
+                .HasForeignKey(e => e.ApiClientId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

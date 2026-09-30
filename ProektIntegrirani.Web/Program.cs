@@ -19,7 +19,9 @@ builder.Services
     .AddMappers()
     .AddFplIntegration(builder.Configuration)
     .AddMessaging(builder.Configuration)
-    .AddEmail(builder.Configuration);
+    .AddEmail(builder.Configuration)
+    .AddInboundProcessing()
+    .AddExternalApiRateLimiting();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -42,6 +44,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+// Order matters: the middleware identifies the ApiClient that the rate limiter then partitions by.
+app.UseMiddleware<ApiKeyAuthMiddleware>();
+app.UseRateLimiter();
 
 app.MapControllers();
 

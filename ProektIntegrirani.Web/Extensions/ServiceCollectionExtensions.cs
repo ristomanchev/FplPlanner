@@ -36,6 +36,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWeeklyReportService, WeeklyReportService>();
         services.AddScoped<IExcelImportService, ExcelImportService>();
         services.AddScoped<IExcelExportService, ExcelExportService>();
+        services.AddScoped<IApiClientService, ApiClientService>();
+        services.AddScoped<IInboundSquadEntryService, InboundSquadEntryService>();
+        services.AddScoped<InboundSquadEntryProcessor>();
         return services;
     }
 
@@ -51,6 +54,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EtlMapper>();
         services.AddScoped<SquadMapper>();
         services.AddScoped<ReportMapper>();
+        services.AddScoped<ApiClientMapper>();
+        services.AddScoped<InboundSquadEntryMapper>();
         return services;
     }
 
@@ -87,6 +92,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEmailQueue, ChannelEmailQueue>();
         services.AddHostedService<EmailBackgroundService>();
         services.AddHostedService<WeeklyReportBackgroundService>();
+        return services;
+    }
+
+    public static IServiceCollection AddInboundProcessing(this IServiceCollection services)
+    {
+        services.AddHostedService<InboundSquadProcessingBackgroundService>();
         return services;
     }
 }

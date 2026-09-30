@@ -83,6 +83,8 @@ GET  /api/export/predictions                        # .xlsx
 | `Gameweek` | коло 1–38: deadline, завршено |
 | `Fixture` | натпревар: **две FK кон Club** (домаќин/гостин, без cascade), опционално коло |
 | `Manager` | FPL менаџер: entry id, тим, email, банка, слободни трансфери |
+| `ApiClient` | надворешен систем што смее да го повикува `/api/external`: име, SHA-256 hash на API клучот, активен, лимит барања/мин |
+| `InboundSquadEntry` | тим пратен од надворешен систем: суров payload, статус Pending/Processing/Completed/Failed, грешка, FK кон `ApiClient` |
 | `SquadPick` | **тернарна релација Manager × Gameweek × Player**: позиција 1–15 (12–15 клупа), капитен, вице. Unique index на (ManagerId, GameweekId, PlayerId) |
 | `PlayerPrediction` | Player × Gameweek × ModelType: очекувани поени + `Breakdown` (owned) по категорија |
 
@@ -128,6 +130,14 @@ GET  /api/export/predictions                        # .xlsx
    - `ImportController` + `IExcelImportService`: проверка на фајлот (празен, `.xlsx`, до 5 MB), задолжителни колони, проверка на секој ред → `ImportResult<T>` со `ImportError` (ред, колона, порака). Шаблон: `GET /api/import/squads/get-import-template`.
    - Ако сите редови се валидни, тимот се зачувува преку `ISquadService`, со истите FPL правила како и API-то.
 
+5. **Inbound REST API**:
+   - Надворешен систем праќа тим со `POST /api/external/squads` и header `X-Api-Key`. Тимот се идентификува со FPL id-ја: `fplEntryId`, `gameweekNumber`, `picks[fplId, squadPosition, isCaptain, isViceCaptain]`.
+   - `ApiKeyAuthMiddleware` го проверува клучот (401 ако недостига или е невалиден). Rate limiter-от `external-api` има посебен прозорец за секој клуч, со лимит од `ApiClient.RequestsPerMinute`. Над лимитот враќа 429.
+   - Барањето само го зачувува payload-от како `InboundSquadEntry` (`Pending`) и враќа **202 Accepted** со id.
+   - `InboundSquadProcessingBackgroundService` на секои 10 секунди го повикува `InboundSquadEntryProcessor`. Тој зема најмногу 10 записи со статус `Pending`, најстарите прво, го наоѓа менаџерот и играчите и го зачувува тимот преку `ISquadService` (истите FPL правила). Резултатот е `Completed` со `ManagerId`, или `Failed` со сите прекршени правила во `ErrorMessage`.
+   - `GET /api/external/squads/{id}/status` го враќа статусот. Клиентот ги гледа само своите записи.
+   - Администрација: CRUD на `/api/apiclients` (клучот се прикажува само при креирање или `regenerate-key`), и `/api/inboundsquadentries` (листа по статус, детали, `retry` за Failed, бришење).
+
 ## Одлуки при дизајнот
 
 | Одлука | Зошто |
@@ -140,6 +150,9 @@ GET  /api/export/predictions                        # .xlsx
 | Enums како string (во базата и во JSON) | Читливо, не зависи од редоследот во enum-от; невалидна вредност → 400. |
 | Owned types (`PlayerSeasonStats`, `PointsBreakdown`) | Групирани поврзани полиња без дополнителни табели и JOIN-ови. |
 | `Service/Logic` (статички, без I/O) | Алгоритмите се тестираат без база и HTTP. Сервисите само вчитуваат/зачувуваат околу нив. |
+| API клучевите се чуваат како SHA-256 hash | Како лозинките: ако базата протече, клучевите не се употребливи. Клучот се прикажува само еднаш. |
+| Middleware прави `return` по секој 401 и го користи `IApiClientService` | Невалидно барање никогаш не стига до контролерот. Web слојот не пристапува директно до `DbContext`. |
+| Rate limit по клиент (`RequestsPerMinute`) | Различни партнери можат да имаат различен лимит, наместо еден фиксен број за сите. |
 | Web е чист API | Frontend не е задолжителен. Scalar UI за тестирање. |
 
 ## Познати ограничувања
