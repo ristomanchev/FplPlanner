@@ -1,8 +1,11 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using ProektIntegrirani.Repository;
+using ProektIntegrirani.Service.Interface;
 using ProektIntegrirani.Web.Extensions;
+using ProektIntegrirani.Web.Interceptor;
 using ProektIntegrirani.Web.Middlewares;
+using ProektIntegrirani.Web.Services;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,8 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                        ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<AuditInterceptor>();
+
+builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
+{
+    options.UseSqlite(connectionString);
+    options.AddInterceptors(sp.GetRequiredService<AuditInterceptor>());
+});
 
 builder.Services
     .AddRepositories()

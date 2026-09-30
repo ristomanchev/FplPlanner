@@ -19,18 +19,21 @@ public class WeeklyReportService : IWeeklyReportService
     private readonly IGameweekService _gameweekService;
     private readonly IRepository<Manager> _managerRepository;
     private readonly IEmailQueue _emailQueue;
+    private readonly IExcelExportService _excelExportService;
     private readonly ILogger<WeeklyReportService> _logger;
 
     public WeeklyReportService(ISquadService squadService,
         IGameweekService gameweekService,
         IRepository<Manager> managerRepository,
         IEmailQueue emailQueue,
+        IExcelExportService excelExportService,
         ILogger<WeeklyReportService> logger)
     {
         _squadService = squadService;
         _gameweekService = gameweekService;
         _managerRepository = managerRepository;
         _emailQueue = emailQueue;
+        _excelExportService = excelExportService;
         _logger = logger;
     }
 
@@ -77,7 +80,16 @@ public class WeeklyReportService : IWeeklyReportService
             To = report.Email,
             ToName = report.ManagerName,
             Subject = $"FPL Planner — {report.TeamName}, gameweek {report.GameweekNumber}",
-            HtmlBody = WeeklyReportHtmlBuilder.Build(report)
+            HtmlBody = WeeklyReportHtmlBuilder.Build(report),
+            Attachments =
+            [
+                new EmailAttachment
+                {
+                    FileName = $"fpl-predictions-gw{report.GameweekNumber}.xlsx",
+                    Content = await _excelExportService.ExportPredictionsToExcel(TransferHorizon),
+                    ContentType = EmailAttachment.ExcelContentType
+                }
+            ]
         }, cancellationToken);
 
         var manager = await _managerRepository.GetAsync(selector: m => m, predicate: m => m.Id == managerId);

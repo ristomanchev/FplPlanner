@@ -3,7 +3,7 @@ using ProektIntegrirani.Domain.Common;
 namespace ProektIntegrirani.Domain.Models;
 
 // Ternary relation Manager × Gameweek × Player.
-public class SquadPick : BaseEntity
+public class SquadPick : BaseAuditableEntity
 {
     // 1–11 starting XI, 12–15 bench (in substitution order).
     public int SquadPosition { get; set; }

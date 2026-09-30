@@ -2,7 +2,7 @@ using ProektIntegrirani.Domain.Common;
 
 namespace ProektIntegrirani.Domain.Models;
 
-public class Manager : BaseEntity
+public class Manager : BaseAuditableEntity
 {
     public int FplEntryId { get; set; }
     public string TeamName { get; set; } = string.Empty;

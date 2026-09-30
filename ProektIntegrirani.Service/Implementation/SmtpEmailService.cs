@@ -26,11 +26,19 @@ public class SmtpEmailService : IEmailService
         email.From.Add(new MailboxAddress(_settings.FromName, _settings.FromAddress));
         email.To.Add(new MailboxAddress(message.ToName, message.To));
         email.Subject = message.Subject;
-        email.Body = new BodyBuilder
+        var builder = new BodyBuilder
         {
             HtmlBody = message.HtmlBody,
             TextBody = message.PlainText
-        }.ToMessageBody();
+        };
+
+        foreach (var attachment in message.Attachments ?? [])
+        {
+            builder.Attachments.Add(attachment.FileName, attachment.Content,
+                ContentType.Parse(attachment.ContentType ?? "application/octet-stream"));
+        }
+
+        email.Body = builder.ToMessageBody();
 
         using var smtp = new SmtpClient();
         try

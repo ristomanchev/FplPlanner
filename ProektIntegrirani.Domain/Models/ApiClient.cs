@@ -3,7 +3,7 @@ using ProektIntegrirani.Domain.Common;
 namespace ProektIntegrirani.Domain.Models;
 
 // An external system allowed to call /api/external endpoints with an X-Api-Key header.
-public class ApiClient : BaseEntity
+public class ApiClient : BaseAuditableEntity
 {
     public string Name { get; set; } = string.Empty;
 

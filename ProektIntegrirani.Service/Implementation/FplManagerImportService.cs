@@ -1,3 +1,7 @@
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ProektIntegrirani.Domain.Configuration;
 using ProektIntegrirani.Domain.Exceptions;
 using ProektIntegrirani.Domain.ExternalModels;
 using ProektIntegrirani.Domain.Models;
@@ -15,24 +19,34 @@ public class FplManagerImportService : IFplManagerImportService
     private readonly IRepository<Gameweek> _gameweekRepository;
     private readonly IRepository<Player> _playerRepository;
     private readonly IRepository<SquadPick> _squadPickRepository;
+    private readonly IMemoryCache _memoryCache;
+    private readonly FplApiSettings _settings;
+    private readonly ILogger<FplManagerImportService> _logger;
 
     public FplManagerImportService(IFplApiClient fplApiClient,
         IRepository<Manager> managerRepository,
         IRepository<Gameweek> gameweekRepository,
         IRepository<Player> playerRepository,
-        IRepository<SquadPick> squadPickRepository)
+        IRepository<SquadPick> squadPickRepository,
+        IMemoryCache memoryCache,
+        IOptions<FplApiSettings> settings,
+        ILogger<FplManagerImportService> logger)
     {
         _fplApiClient = fplApiClient;
         _managerRepository = managerRepository;
         _gameweekRepository = gameweekRepository;
         _playerRepository = playerRepository;
         _squadPickRepository = squadPickRepository;
+        _memoryCache = memoryCache;
+        _settings = settings.Value;
+        _logger = logger;
     }
 
     public async Task<Manager> ImportAsync(int fplEntryId, string? email,
         CancellationToken cancellationToken = default)
     {
-        var entry = await _fplApiClient.GetEntryAsync(fplEntryId, cancellationToken);
+        var entry = await GetCachedAsync($"fpl-api:entry:{fplEntryId}",
+            () => _fplApiClient.GetEntryAsync(fplEntryId, cancellationToken));
         var manager = await UpsertManagerAsync(entry.Id, entry.Name,
             $"{entry.PlayerFirstName} {entry.PlayerLastName}".Trim(),
             FplTransformations.ToMillions(entry.LastDeadlineBank ?? 0), email);
@@ -77,7 +91,8 @@ public class FplManagerImportService : IFplManagerImportService
                        ?? throw new BusinessRuleException(
                            $"Gameweek {gameweekNumber} is not in the database. Run the FPL ETL first.");
 
-        var fplPicks = await _fplApiClient.GetPicksAsync(manager.FplEntryId, gameweekNumber, cancellationToken);
+        var fplPicks = await GetCachedAsync($"fpl-api:picks:{manager.FplEntryId}:{gameweekNumber}",
+            () => _fplApiClient.GetPicksAsync(manager.FplEntryId, gameweekNumber, cancellationToken));
         var elementIds = fplPicks.Picks.Select(p => p.Element).ToList();
 
         var playerIdsByFplId = (await _playerRepository.GetAllAsync(
@@ -108,5 +123,19 @@ public class FplManagerImportService : IFplManagerImportService
             IsViceCaptain = p.IsViceCaptain
         }).ToList();
         await _squadPickRepository.InsertManyAsync(newPicks);
+    }
+
+    // Re-importing the same manager within a few minutes reuses the FPL response instead of calling the API again.
+    private async Task<T> GetCachedAsync<T>(string cacheKey, Func<Task<T>> fetch) where T : class
+    {
+        if (_memoryCache.TryGetValue(cacheKey, out T? cached) && cached != null)
+        {
+            _logger.LogDebug("Cache hit for {CacheKey}", cacheKey);
+            return cached;
+        }
+
+        var apiData = await fetch();
+        _memoryCache.Set(cacheKey, apiData, TimeSpan.FromMinutes(_settings.CacheExpirationMinutes));
+        return apiData;
     }
 }

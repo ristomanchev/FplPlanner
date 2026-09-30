@@ -8,6 +8,7 @@ using ProektIntegrirani.Service.Implementation;
 using ProektIntegrirani.Service.Interface;
 using ProektIntegrirani.Service.Jobs;
 using ProektIntegrirani.Web.Mapper;
+using Quartz;
 
 namespace ProektIntegrirani.Web.Extensions;
 
@@ -63,6 +64,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddFplIntegration(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<FplApiSettings>(configuration.GetSection(FplApiSettings.SectionName));
+        services.AddMemoryCache();
 
         services.AddHttpClient<IFplApiClient, FplApiClient>((sp, client) =>
         {
@@ -92,7 +94,19 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(Channel.CreateUnbounded<EmailMessage>());
         services.AddSingleton<IEmailQueue, ChannelEmailQueue>();
         services.AddHostedService<EmailBackgroundService>();
-        services.AddHostedService<WeeklyReportBackgroundService>();
+
+        services.AddQuartz(options =>
+        {
+            var jobKey = new JobKey("weekly-report", "email");
+            options.AddJob<QuartzWeeklyReportJob>(o => o.WithIdentity(jobKey));
+
+            options.AddTrigger(o => o
+                .ForJob(jobKey)
+                .WithIdentity("weekly-report-trigger")
+                .WithCronSchedule("0 0 * * * ?") // at the start of every hour
+                .WithDescription("Queues weekly reports before the gameweek deadline"));
+        });
+        services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
         return services;
     }
 

@@ -118,13 +118,16 @@ GET  /api/export/predictions                        # .xlsx
 
 ## Интеграции
 
-1. **Надворешно API + ETL**: `FplApiClient` е typed `HttpClient`. `FplEtlService` извршува Extract (`bootstrap-static`, `fixtures`), Transform и Load:
-   - Transform: `element_type` → `Position`, `a/d/i/s/u/n` → `PlayerStatus`, `now_cost/10` → цена во милиони.
-   - Load: upsert по `FplId`.
+1. **Надворешно API + ETL**:
+   - Extract: `FplApiClient` (typed `HttpClient`) ги влече `bootstrap-static` и `fixtures`.
+   - Transform: `FplTransformations` ги претвора во доменски ентитети: `element_type` → `Position`, `a/d/i/s/u/n` → `PlayerStatus`, `now_cost/10` → цена во милиони. Id-то се добива со `GuidHelper.FromExternalId("Player", fplId)`, па истиот FPL запис секогаш добива исто Id, а FK-ите (`Player.ClubId`, `Fixture.GameweekId`) се пресметуваат без пребарување.
+   - Load: `IFplDataRepository` со `BulkInsertOrUpdate` (EFCore.BulkExtensions), по една операција за секоја табела.
+   - Секое извршување се запишува во `EtlSyncLog` (почеток, крај, успех, грешка, број на записи) во `try/catch/finally`. Дневникот е достапен на `GET /api/etl/logs`.
 
-   Се извршува при старт и на секои 6 часа (`FplSyncBackgroundService`), или рачно со `POST /api/etl/run`. Увозот на менаџер го користи `entry/{id}` и `picks`.
+   Се извршува при старт и на секои 6 часа (`FplEtlBackgroundService`), или рачно со `POST /api/etl/run` (502 ако FPL API не одговори).
+   Увозот на менаџер ги користи `entry/{id}` и `picks`. Одговорите се кешираат во `IMemoryCache` (`CacheExpirationMinutes`).
 2. **RabbitMQ**: по успешен ETL се праќа `FplDataSyncedMessage` на durable queue. `PredictionRecalculationConsumer` ги пресметува предвидувањата асинхроно. Поставки: prefetch 1, рачен ack, nack без requeue при грешка, една заедничка конекција со automatic recovery.
-3. **Email**: `WeeklyReportService` го составува извештајот (капитен, трансфери, повредени/сомнителни играчи, постава) и го става `EmailMessage` во `IEmailQueue` (`Channel<EmailMessage>`). `EmailBackgroundService` ја чита редицата и праќа преку `SmtpEmailService` (MailKit, `EmailSettings`). Така HTTP барањето не чека SMTP. `WeeklyReportBackgroundService` го става извештајот во редицата 24 ч пред deadline, еднаш по коло (`Manager.LastReportedGameweek`).
+3. **Email**: `WeeklyReportService` го составува извештајот (капитен, трансфери, повредени/сомнителни играчи, постава) и го става `EmailMessage` во `IEmailQueue` (`Channel<EmailMessage>`). `EmailBackgroundService` ја чита редицата и праќа преку `SmtpEmailService` (MailKit, `EmailSettings`). Така HTTP барањето не чека SMTP. Извештајот носи и Excel прилог со предвидувањата (`EmailAttachment`). `QuartzWeeklyReportJob` (Quartz, cron на секој час) го става извештајот во редицата 24 ч пред deadline, еднаш по коло (`Manager.LastReportedGameweek`).
 4. **Excel** (ClosedXML):
    - `ExportController` + `IExcelExportService` (враќа `byte[]`): предвидувања (xP по коло + детален пресмет) и тимот на менаџерот во форматот за увоз.
    - `ImportController` + `IExcelImportService`: проверка на фајлот (празен, `.xlsx`, до 5 MB), задолжителни колони, проверка на секој ред → `ImportResult<T>` со `ImportError` (ред, колона, порака). Шаблон: `GET /api/import/squads/get-import-template`.
@@ -148,6 +151,9 @@ GET  /api/export/predictions                        # .xlsx
 | Insert/Update повторно го вчитуваат ентитетот | Навигациите (`Club.ShortName`...) се пополнети за одговорот. |
 | `decimal` → `double` во SQLite, UTC конвертор за `DateTime` | SQLite нема decimal (не може `ORDER BY`) и не чува временска зона. |
 | Enums како string (во базата и во JSON) | Читливо, не зависи од редоследот во enum-от; невалидна вредност → 400. |
+| `BaseAuditableEntity` + `AuditInterceptor` + `ICurrentUser` за `Manager`, `SquadPick`, `ApiClient` | Без кориснички сметки. „Корисникот“ е `api-client:<име>` за надворешни системи, `api` за обични HTTP барања и `system` за background job-ови. `CurrentUser` е во Web, бидејќи го чита `HttpContext`, па Service не зависи од ASP.NET. |
+| Надворешниот клуч (FplId, број на коло, FplEntryId) не може да се менува | Id-то се пресметува од него (`GuidHelper`); ако се смени, CRUD записот и ETL записот би се разминале. |
+| Quartz за неделниот извештај, BackgroundService за ETL/inbound/queue | Quartz кога е потребен cron распоред; `BackgroundService` за континуирани циклуси. |
 | Owned types (`PlayerSeasonStats`, `PointsBreakdown`) | Групирани поврзани полиња без дополнителни табели и JOIN-ови. |
 | `Service/Logic` (статички, без I/O) | Алгоритмите се тестираат без база и HTTP. Сервисите само вчитуваат/зачувуваат околу нив. |
 | API клучевите се чуваат како SHA-256 hash | Како лозинките: ако базата протече, клучевите не се употребливи. Клучот се прикажува само еднаш. |
@@ -159,4 +165,4 @@ GET  /api/export/predictions                        # .xlsx
 
 - FPL цената за продажба (купувачка цена + половина од растот) не е јавна, па за трансферите се користи тековната цена.
 - Бројот на слободни трансфери не е во јавното API. Се чува во `Manager.FreeTransfers` (стандардно 1, може да се промени со CRUD).
-- Нема автентикација. Сите endpoints се јавни, што е во ред за локална демонстрација.
+- Нема JWT/Identity, бидејќи доменот нема кориснички сметки (менаџерите се FPL тимови). Надворешниот API (`/api/external`) е заштитен со API клуч. Останатите endpoints се за локална администрација и демонстрација.

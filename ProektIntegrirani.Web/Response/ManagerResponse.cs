@@ -8,4 +8,8 @@ public record ManagerResponse(
     string? Email,
     decimal Bank,
     int FreeTransfers,
-    int? LastReportedGameweek);
+    int? LastReportedGameweek,
+    string CreatedBy,
+    DateTime DateCreated,
+    string? LastModifiedBy,
+    DateTime? DateLastModified);
