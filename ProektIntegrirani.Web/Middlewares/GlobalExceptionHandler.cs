@@ -47,9 +47,9 @@ public class GlobalExceptionHandler : IExceptionHandler
             Detail = detail
         };
 
-        if (exception is SquadValidationException squadValidation)
+        if (exception is BusinessRuleException { Errors.Count: > 0 } businessRule)
         {
-            problemDetails.Extensions["errors"] = squadValidation.Errors;
+            problemDetails.Extensions["errors"] = businessRule.Errors;
         }
 
         httpContext.Response.StatusCode = statusCode;
