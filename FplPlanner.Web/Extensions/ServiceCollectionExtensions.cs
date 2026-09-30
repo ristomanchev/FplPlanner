@@ -1,12 +1,12 @@
 using System.Threading.Channels;
 using Microsoft.Extensions.Options;
 using FplPlanner.Domain.Configuration;
-using FplPlanner.Domain.Dto.Email;
 using FplPlanner.Repository.Implementation;
 using FplPlanner.Repository.Interface;
 using FplPlanner.Service.Implementation;
 using FplPlanner.Service.Interface;
 using FplPlanner.Service.Jobs;
+using FplPlanner.Service.Logic;
 using FplPlanner.Web.Mapper;
 using Quartz;
 
@@ -89,9 +89,17 @@ public static class ServiceCollectionExtensions
 
     public static IServiceCollection AddEmail(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+        // Fail at startup, not on the first e-mail, when the SMTP settings are missing or still placeholders.
+        services.AddOptions<EmailSettings>()
+            .Bind(configuration.GetSection(EmailSettings.SectionName))
+            .Validate(s => !string.IsNullOrWhiteSpace(s.SmtpHost), "EmailSettings:SmtpHost is required.")
+            .Validate(s => s.SmtpPort is > 0 and <= 65535, "EmailSettings:SmtpPort must be a valid port.")
+            .Validate(s => EmailAddressValidator.IsValid(s.FromAddress),
+                "EmailSettings:FromAddress must be a valid e-mail address.")
+            .ValidateOnStart();
+
         services.AddScoped<IEmailService, SmtpEmailService>();
-        services.AddSingleton(Channel.CreateUnbounded<EmailMessage>());
+        services.AddSingleton(Channel.CreateUnbounded<QueuedEmail>());
         services.AddSingleton<IEmailQueue, ChannelEmailQueue>();
         services.AddHostedService<EmailBackgroundService>();
 

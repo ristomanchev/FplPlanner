@@ -4,6 +4,7 @@ using FplPlanner.Domain.ExternalModels;
 using FplPlanner.Domain.Models;
 using FplPlanner.Repository.Interface;
 using FplPlanner.Service.Interface;
+using FplPlanner.Service.Logic;
 
 namespace FplPlanner.Service.Implementation;
 
@@ -71,10 +72,16 @@ public class ManagerService : IManagerService
 
     private static void Apply(Manager manager, ManagerDto dto)
     {
+        var email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim();
+        if (email != null && !EmailAddressValidator.IsValid(email))
+        {
+            throw new BusinessRuleException($"'{dto.Email}' is not a valid e-mail address.");
+        }
+
         manager.FplEntryId = dto.FplEntryId;
         manager.TeamName = dto.TeamName;
         manager.ManagerName = dto.ManagerName;
-        manager.Email = dto.Email;
+        manager.Email = email;
         manager.Bank = dto.Bank;
         manager.FreeTransfers = dto.FreeTransfers;
     }

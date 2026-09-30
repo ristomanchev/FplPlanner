@@ -4,5 +4,8 @@ namespace FplPlanner.Service.Interface;
 
 public interface IEmailQueue
 {
-    Task EnqueueAsync(EmailMessage message, CancellationToken cancellationToken = default);
+    // onSent runs (in its own DI scope) only after the e-mail has actually been delivered to the SMTP server.
+    Task EnqueueAsync(EmailMessage message,
+        Func<IServiceProvider, CancellationToken, Task>? onSent = null,
+        CancellationToken cancellationToken = default);
 }

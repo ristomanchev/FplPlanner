@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using FplPlanner.Domain.Dto;
 using FplPlanner.Domain.Dto.Email;
@@ -74,29 +75,47 @@ public class WeeklyReportService : IWeeklyReportService
             throw new BusinessRuleException($"{report.TeamName} has no e-mail address.");
         }
 
-        // Queued, not sent here: EmailBackgroundService delivers it.
+        if (report.Deadline <= DateTime.UtcNow)
+        {
+            throw new BusinessRuleException(
+                $"The deadline for gameweek {report.GameweekNumber} has passed; a report would be of no use.");
+        }
+
+        // Queued, not sent here: EmailBackgroundService delivers it and only then marks the gameweek as reported,
+        // so a report that could not be delivered is tried again by the next scheduled run.
+        var gameweekNumber = report.GameweekNumber;
         await _emailQueue.EnqueueAsync(new EmailMessage
         {
             To = report.Email,
             ToName = report.ManagerName,
-            Subject = $"FPL Planner — {report.TeamName}, gameweek {report.GameweekNumber}",
+            Subject = $"FPL Planner — {report.TeamName}, gameweek {gameweekNumber}",
             HtmlBody = WeeklyReportHtmlBuilder.Build(report),
             Attachments =
             [
                 new EmailAttachment
                 {
-                    FileName = $"fpl-predictions-gw{report.GameweekNumber}.xlsx",
+                    FileName = $"fpl-predictions-gw{gameweekNumber}.xlsx",
                     Content = await _excelExportService.ExportPredictionsToExcel(TransferHorizon),
                     ContentType = EmailAttachment.ExcelContentType
                 }
             ]
-        }, cancellationToken);
-
-        var manager = await _managerRepository.GetAsync(selector: m => m, predicate: m => m.Id == managerId);
-        manager!.LastReportedGameweek = report.GameweekNumber;
-        await _managerRepository.UpdateAsync(manager);
+        }, onSent: (services, _) => MarkReportedAsync(services, managerId, gameweekNumber),
+            cancellationToken: cancellationToken);
 
         return report;
+    }
+
+    private static async Task MarkReportedAsync(IServiceProvider services, Guid managerId, int gameweekNumber)
+    {
+        var managerRepository = services.GetRequiredService<IRepository<Manager>>();
+        var manager = await managerRepository.GetAsync(selector: m => m, predicate: m => m.Id == managerId);
+        if (manager == null || manager.LastReportedGameweek >= gameweekNumber)
+        {
+            return;
+        }
+
+        manager.LastReportedGameweek = gameweekNumber;
+        await managerRepository.UpdateAsync(manager);
     }
 
     public async Task<int> SendDueReportsAsync(CancellationToken cancellationToken = default)

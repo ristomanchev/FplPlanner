@@ -7,6 +7,7 @@ using FplPlanner.Domain.ExternalModels;
 using FplPlanner.Domain.Models;
 using FplPlanner.Repository.Interface;
 using FplPlanner.Service.Interface;
+using FplPlanner.Service.Logic;
 
 namespace FplPlanner.Service.Implementation;
 
@@ -45,6 +46,12 @@ public class FplManagerImportService : IFplManagerImportService
     public async Task<Manager> ImportAsync(int fplEntryId, string? email,
         CancellationToken cancellationToken = default)
     {
+        email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
+        if (email != null && !EmailAddressValidator.IsValid(email))
+        {
+            throw new BusinessRuleException($"'{email}' is not a valid e-mail address.");
+        }
+
         var entry = await GetCachedAsync($"fpl-api:entry:{fplEntryId}",
             () => _fplApiClient.GetEntryAsync(fplEntryId, cancellationToken));
         var manager = await UpsertManagerAsync(entry.Id, entry.Name,

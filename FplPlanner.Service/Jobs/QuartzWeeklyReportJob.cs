@@ -35,9 +35,12 @@ public class QuartzWeeklyReportJob : IJob
         }
 
         var next = await _gameweekService.GetNextAsync();
-        if (next.Deadline - DateTime.UtcNow > TimeSpan.FromHours(_settings.SendHoursBeforeDeadline))
+        var untilDeadline = next.Deadline - DateTime.UtcNow;
+
+        // Only inside the window before the deadline: too early the data may still change, after it the advice is useless.
+        if (untilDeadline <= TimeSpan.Zero || untilDeadline > TimeSpan.FromHours(_settings.SendHoursBeforeDeadline))
         {
-            _logger.LogDebug("Gameweek {Gameweek} deadline is not close yet.", next.Number);
+            _logger.LogDebug("Not in the report window for gameweek {Gameweek}.", next.Number);
             return;
         }
 
