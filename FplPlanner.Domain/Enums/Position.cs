@@ -1,0 +1,10 @@
+namespace FplPlanner.Domain.Enums;
+
+// Values match FPL element_type, so the ETL can cast directly.
+public enum Position
+{
+    Goalkeeper = 1,
+    Defender = 2,
+    Midfielder = 3,
+    Forward = 4
+}

@@ -51,8 +51,8 @@ brew services start mailpit     # SMTP :1025, пораки на http://localhost
 **2. База и апликација:**
 
 ```bash
-cd ProektIntegrirani.Repository && dotnet ef database update && cd ..
-dotnet run --project ProektIntegrirani.Web --launch-profile http
+cd FplPlanner.Repository && dotnet ef database update && cd ..
+dotnet run --project FplPlanner.Web --launch-profile http
 ```
 
 **3. Адреси:**
@@ -126,11 +126,11 @@ Onion архитектура во четири проекта:
 
 | Проект | Содржина |
 |---|---|
-| `ProektIntegrirani.Domain` | `Models`, `ValueObjects`, `Dto`, `Enums`, `Rules` (FPL правила и бодување), `Exceptions`, `ExternalModels` (FPL API), `Messages`, `Configuration` |
-| `ProektIntegrirani.Repository` | `ApplicationDbContext` (Fluent API), генерички `IRepository<T>`, `IFplDataRepository` (bulk), `Migrations` |
-| `ProektIntegrirani.Service` | `Interface` / `Implementation` сервиси, `Logic` (алгоритми без база и HTTP), `Jobs` (позадински задачи) |
-| `ProektIntegrirani.Web` | `Controllers`, `Mapper`, `Request`, `Response`, `Extensions`, `Middlewares`, `Interceptor`, `wwwroot` (UI) |
-| `ProektIntegrirani.Tests` | xUnit тестови за логиката |
+| `FplPlanner.Domain` | `Models`, `ValueObjects`, `Dto`, `Enums`, `Rules` (FPL правила и бодување), `Exceptions`, `ExternalModels` (FPL API), `Messages`, `Configuration` |
+| `FplPlanner.Repository` | `ApplicationDbContext` (Fluent API), генерички `IRepository<T>`, `IFplDataRepository` (bulk), `Migrations` |
+| `FplPlanner.Service` | `Interface` / `Implementation` сервиси, `Logic` (алгоритми без база и HTTP), `Jobs` (позадински задачи) |
+| `FplPlanner.Web` | `Controllers`, `Mapper`, `Request`, `Response`, `Extensions`, `Middlewares`, `Interceptor`, `wwwroot` (UI) |
+| `FplPlanner.Tests` | xUnit тестови за логиката |
 
 Тек на едно барање: `Controller` → `Mapper` (Request → DTO) → `Service` (бизнис правила) → `IRepository<T>` → EF Core, а одговорот се враќа преку `Mapper` (entity → Response).
 
