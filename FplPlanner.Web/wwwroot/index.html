@@ -27,11 +27,11 @@
             <form id="import-form" class="inline-form">
                 <input id="import-entry" type="number" min="1" placeholder="FPL entry id" required>
                 <input id="import-email" type="email" placeholder="email (опционално)">
-                <button type="submit">Увези од FPL</button>
+                <button type="submit">Import од FPL</button>
             </form>
         </div>
 
-        <div id="manager-empty" class="card muted">Избери менаџер или увези еден со неговото FPL entry id.</div>
+        <div id="manager-empty" class="card muted">Избери менаџер или направи import со неговото FPL entry id.</div>
 
         <div id="manager-view" hidden>
             <div class="grid-2">
@@ -44,8 +44,8 @@
                     <ul id="squad-errors" class="errors"></ul>
                     <div class="actions">
                         <button id="send-report">Прати неделен извештај</button>
-                        <a id="export-squad" class="button secondary">Симни тим (.xlsx)</a>
-                        <label class="button secondary file-button">Увези тим (.xlsx)
+                        <a id="export-squad" class="button secondary">Export тим (.xlsx)</a>
+                        <label class="button secondary file-button">Import тим (.xlsx)
                             <input id="import-squad-file" type="file" accept=".xlsx" hidden>
                         </label>
                     </div>
@@ -90,7 +90,7 @@
                     <option value="Forward">Напад</option>
                 </select>
             </label>
-            <a class="button secondary" href="/api/export/predictions?horizon=6">Симни предвидувања (.xlsx)</a>
+            <a class="button secondary" href="/api/export/predictions?horizon=6">Export предвидувања (.xlsx)</a>
         </div>
         <div class="card">
             <table class="table">

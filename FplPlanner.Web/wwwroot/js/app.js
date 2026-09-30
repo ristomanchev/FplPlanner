@@ -180,7 +180,7 @@ async function importManager(event) {
             fplEntryId: Number($('import-entry').value),
             email: $('import-email').value || null,
         });
-        toast(`Увезен: ${manager.teamName}`);
+        toast(`Import успешен: ${manager.teamName}`);
         $('import-form').reset();
         await loadManagers(manager.id);
     });
@@ -202,7 +202,7 @@ async function importSquadFile(event) {
     formData.append('file', file);
     try {
         await api.postForm(`/api/import/squads/${state.managerId}/gameweeks/${state.nextGameweek.number}`, formData);
-        toast(`Тимот е увезен за коло ${state.nextGameweek.number}`);
+        toast(`Import на тимот за коло ${state.nextGameweek.number} е успешен`);
         await selectManager(state.managerId);
     } catch (error) {
         toast(error.message, true);
