@@ -10,17 +10,28 @@ Backend за Fantasy Premier League 2026/27. Ги презема податоц�
 
 ## Стартување
 
+Потребни локални сервиси, еднократно преку Homebrew:
+
 ```bash
-docker compose up -d                 # RabbitMQ (5672, UI :15672 guest/guest) и Mailpit (SMTP 1025, inbox :8025)
+brew install rabbitmq mailpit
+brew services start rabbitmq         # AMQP :5672, UI http://localhost:15672 (guest/guest)
+brew services start mailpit          # SMTP :1025, inbox http://localhost:8025
+```
+
+Стартување:
+
+```bash
 cd ProektIntegrirani.Repository && dotnet ef database update && cd ..
 dotnet run --project ProektIntegrirani.Web --launch-profile http
 ```
+
+Во Development мејловите одат во локалниот Mailpit (`appsettings.Development.json`). За вистински мејлови се пополнуваат Gmail поставките во `EmailSettings` во `appsettings.json` (App Password).
 
 - API UI (Scalar): http://localhost:5092/scalar
 - При старт апликацијата сама ги повлекува податоците од FPL (ETL). Потоа преку RabbitMQ ги пресметува предвидувањата.
 - Тестови: `dotnet test`
 
-Апликацијата работи и без Docker. Ако RabbitMQ е недостапен, ETL-от сепак ги зачувува податоците, а предвидувањата се пресметуваат рачно со `POST /api/playerpredictions/recalculate`. Без SMTP сервер не се праќаат мејлови.
+Ако RabbitMQ е недостапен, ETL-от сепак ги зачувува податоците, а предвидувањата се пресметуваат рачно со `POST /api/playerpredictions/recalculate`. Без SMTP сервер не се праќаат мејлови.
 
 Брз пример, од нула до предлог за трансфер:
 
@@ -111,7 +122,7 @@ GET  /api/excel/predictions                         # .xlsx
 
    Се извршува при старт и на секои 6 часа (`FplSyncBackgroundService`), или рачно со `POST /api/etl/run`. Увозот на менаџер го користи `entry/{id}` и `picks`.
 2. **RabbitMQ**: по успешен ETL се праќа `FplDataSyncedMessage` на durable queue. `PredictionRecalculationConsumer` ги пресметува предвидувањата асинхроно. Поставки: prefetch 1, рачен ack, nack без requeue при грешка, една заедничка конекција со automatic recovery.
-3. **Email**: `WeeklyReportService` го составува извештајот (капитен, трансфери, повредени/сомнителни играчи, постава). Се праќа како HTML преку MailKit. `WeeklyReportBackgroundService` го праќа 24 ч пред deadline, еднаш по коло (`Manager.LastReportedGameweek`).
+3. **Email**: `WeeklyReportService` го составува извештајот (капитен, трансфери, повредени/сомнителни играчи, постава) и го става `EmailMessage` во `IEmailQueue` (`Channel<EmailMessage>`). `EmailBackgroundService` ја чита редицата и праќа преку `SmtpEmailService` (MailKit, `EmailSettings`). Така HTTP барањето не чека SMTP. `WeeklyReportBackgroundService` го става извештајот во редицата 24 ч пред deadline, еднаш по коло (`Manager.LastReportedGameweek`).
 4. **Excel** (ClosedXML):
    - извоз на предвидувања (xP по коло + детален пресмет),
    - извоз на тимот на менаџерот, кој служи и како шаблон,

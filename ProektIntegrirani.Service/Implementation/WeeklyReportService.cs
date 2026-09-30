@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using ProektIntegrirani.Domain.Dto;
+using ProektIntegrirani.Domain.Dto.Email;
 using ProektIntegrirani.Domain.Enums;
 using ProektIntegrirani.Domain.Exceptions;
 using ProektIntegrirani.Domain.Models;
@@ -17,19 +18,19 @@ public class WeeklyReportService : IWeeklyReportService
     private readonly ISquadService _squadService;
     private readonly IGameweekService _gameweekService;
     private readonly IRepository<Manager> _managerRepository;
-    private readonly IEmailSender _emailSender;
+    private readonly IEmailQueue _emailQueue;
     private readonly ILogger<WeeklyReportService> _logger;
 
     public WeeklyReportService(ISquadService squadService,
         IGameweekService gameweekService,
         IRepository<Manager> managerRepository,
-        IEmailSender emailSender,
+        IEmailQueue emailQueue,
         ILogger<WeeklyReportService> logger)
     {
         _squadService = squadService;
         _gameweekService = gameweekService;
         _managerRepository = managerRepository;
-        _emailSender = emailSender;
+        _emailQueue = emailQueue;
         _logger = logger;
     }
 
@@ -70,9 +71,14 @@ public class WeeklyReportService : IWeeklyReportService
             throw new BusinessRuleException($"{report.TeamName} has no e-mail address.");
         }
 
-        await _emailSender.SendAsync(report.Email, report.ManagerName,
-            $"FPL Planner — {report.TeamName}, gameweek {report.GameweekNumber}",
-            WeeklyReportHtmlBuilder.Build(report), cancellationToken);
+        // Queued, not sent here: EmailBackgroundService delivers it.
+        await _emailQueue.EnqueueAsync(new EmailMessage
+        {
+            To = report.Email,
+            ToName = report.ManagerName,
+            Subject = $"FPL Planner — {report.TeamName}, gameweek {report.GameweekNumber}",
+            HtmlBody = WeeklyReportHtmlBuilder.Build(report)
+        }, cancellationToken);
 
         var manager = await _managerRepository.GetAsync(selector: m => m, predicate: m => m.Id == managerId);
         manager!.LastReportedGameweek = report.GameweekNumber;

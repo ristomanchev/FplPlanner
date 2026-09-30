@@ -1,5 +1,7 @@
+using System.Threading.Channels;
 using Microsoft.Extensions.Options;
 using ProektIntegrirani.Domain.Configuration;
+using ProektIntegrirani.Domain.Dto.Email;
 using ProektIntegrirani.Repository.Implementation;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Implementation;
@@ -80,7 +82,10 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddEmail(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IEmailService, SmtpEmailService>();
+        services.AddSingleton(Channel.CreateUnbounded<EmailMessage>());
+        services.AddSingleton<IEmailQueue, ChannelEmailQueue>();
+        services.AddHostedService<EmailBackgroundService>();
         services.AddHostedService<WeeklyReportBackgroundService>();
         return services;
     }
