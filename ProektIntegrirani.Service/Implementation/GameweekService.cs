@@ -50,6 +50,15 @@ public class GameweekService : IGameweekService
                ?? throw new NotFoundException("There is no upcoming gameweek.");
     }
 
+    public async Task<List<Gameweek>> GetUpcomingAsync(int count)
+    {
+        var result = await _repository.GetAllAsync(
+            selector: x => x,
+            predicate: x => !x.IsFinished,
+            orderBy: x => x.OrderBy(g => g.Number));
+        return result.Take(count).ToList();
+    }
+
     public async Task<Gameweek> InsertAsync(GameweekDto dto)
     {
         await EnsureNumberIsFreeAsync(dto.Number);

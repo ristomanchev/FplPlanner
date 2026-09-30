@@ -6,6 +6,7 @@ namespace ProektIntegrirani.Domain.Dto;
 public class SquadMemberDto
 {
     public Guid PlayerId { get; set; }
+    public int FplId { get; set; }
     public string WebName { get; set; } = string.Empty;
     public Position Position { get; set; }
     public Guid ClubId { get; set; }

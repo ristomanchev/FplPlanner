@@ -11,6 +11,7 @@ public interface IGameweekService
 
     // First gameweek that is not finished; the one managers are planning for.
     Task<Gameweek> GetNextAsync();
+    Task<List<Gameweek>> GetUpcomingAsync(int count);
     Task<Gameweek> InsertAsync(GameweekDto dto);
     Task<Gameweek> UpdateAsync(Guid id, GameweekDto dto);
     Task<Gameweek> DeleteAsync(Guid id);

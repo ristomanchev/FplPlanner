@@ -8,7 +8,7 @@ public interface IPlayerPredictionService
 {
     Task<PaginatedResult<PlayerPrediction>> GetAllPagedAsync(int? gameweekNumber, Position? position,
         int pageNumber, int pageSize);
-    Task<List<PlayerPrediction>> GetForGameweekAsync(int gameweekNumber);
+    Task<List<PlayerPrediction>> GetForGameweeksAsync(List<int> gameweekNumbers);
     Task<PlayerPrediction> GetByIdAsync(Guid id);
     Task<PlayerPrediction> InsertAsync(PlayerPredictionDto dto);
     Task<PlayerPrediction> UpdateAsync(Guid id, PlayerPredictionDto dto);

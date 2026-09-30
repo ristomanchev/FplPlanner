@@ -49,6 +49,15 @@ public class PlayerService : IPlayerService
                ?? throw new NotFoundException(nameof(Player), id);
     }
 
+    public async Task<List<Player>> GetAllByFplIdsInAsync(List<int> fplIds)
+    {
+        var result = await _repository.GetAllAsync(
+            selector: x => x,
+            predicate: p => fplIds.Contains(p.FplId),
+            include: x => x.Include(p => p.Club));
+        return result.ToList();
+    }
+
     public async Task<Player> InsertAsync(PlayerDto dto)
     {
         await EnsureFplIdIsFreeAsync(dto.FplId);

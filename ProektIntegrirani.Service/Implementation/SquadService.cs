@@ -162,6 +162,7 @@ public class SquadService : ISquadService
                 selector: p => new SquadMemberDto
                 {
                     PlayerId = p.Id,
+                    FplId = p.FplId,
                     WebName = p.WebName,
                     Position = p.Position,
                     ClubId = p.ClubId,
@@ -242,6 +243,7 @@ public class SquadService : ISquadService
         return new SquadMemberDto
         {
             PlayerId = player.Id,
+            FplId = player.FplId,
             WebName = player.WebName,
             Position = player.Position,
             ClubId = player.ClubId,

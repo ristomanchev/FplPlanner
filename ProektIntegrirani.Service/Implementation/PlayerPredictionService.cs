@@ -37,11 +37,12 @@ public class PlayerPredictionService : IPlayerPredictionService
             asNoTracking: true);
     }
 
-    public async Task<List<PlayerPrediction>> GetForGameweekAsync(int gameweekNumber)
+    public async Task<List<PlayerPrediction>> GetForGameweeksAsync(List<int> gameweekNumbers)
     {
         var result = await _repository.GetAllAsync(
             selector: x => x,
-            predicate: pp => pp.Gameweek.Number == gameweekNumber,
+            predicate: pp => gameweekNumbers.Contains(pp.Gameweek.Number)
+                             && pp.ModelType == PredictionModelType.Poisson,
             orderBy: x => x.OrderByDescending(pp => pp.ExpectedPoints),
             include: x => x.Include(pp => pp.Gameweek).Include(pp => pp.Player).ThenInclude(p => p.Club));
         return result.ToList();

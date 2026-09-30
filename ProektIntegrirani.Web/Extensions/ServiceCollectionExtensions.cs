@@ -34,7 +34,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPredictionService, PredictionService>();
         services.AddScoped<ISquadService, SquadService>();
         services.AddScoped<IWeeklyReportService, WeeklyReportService>();
-        services.AddScoped<IExcelService, ExcelService>();
+        services.AddScoped<IExcelImportService, ExcelImportService>();
+        services.AddScoped<IExcelExportService, ExcelExportService>();
         return services;
     }
 
@@ -50,7 +51,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EtlMapper>();
         services.AddScoped<SquadMapper>();
         services.AddScoped<ReportMapper>();
-        services.AddScoped<ExcelMapper>();
         return services;
     }
 

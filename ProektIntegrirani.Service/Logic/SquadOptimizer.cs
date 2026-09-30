@@ -175,6 +175,7 @@ public static class SquadOptimizer
         return new SquadMemberDto
         {
             PlayerId = member.PlayerId,
+            FplId = member.FplId,
             WebName = member.WebName,
             Position = member.Position,
             ClubId = member.ClubId,

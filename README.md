@@ -42,7 +42,7 @@ POST /api/playerpredictions/recalculate?horizon=6
 GET  /api/squads/{managerId}/lineup                 # постава + капитен
 GET  /api/squads/{managerId}/transfer-suggestions?horizon=5&maxTransfers=2
 POST /api/reports/{managerId}/weekly/send           # мејл → http://localhost:8025
-GET  /api/excel/predictions                         # .xlsx
+GET  /api/export/predictions                        # .xlsx
 ```
 
 ## Архитектура (Onion)
@@ -124,9 +124,9 @@ GET  /api/excel/predictions                         # .xlsx
 2. **RabbitMQ**: по успешен ETL се праќа `FplDataSyncedMessage` на durable queue. `PredictionRecalculationConsumer` ги пресметува предвидувањата асинхроно. Поставки: prefetch 1, рачен ack, nack без requeue при грешка, една заедничка конекција со automatic recovery.
 3. **Email**: `WeeklyReportService` го составува извештајот (капитен, трансфери, повредени/сомнителни играчи, постава) и го става `EmailMessage` во `IEmailQueue` (`Channel<EmailMessage>`). `EmailBackgroundService` ја чита редицата и праќа преку `SmtpEmailService` (MailKit, `EmailSettings`). Така HTTP барањето не чека SMTP. `WeeklyReportBackgroundService` го става извештајот во редицата 24 ч пред deadline, еднаш по коло (`Manager.LastReportedGameweek`).
 4. **Excel** (ClosedXML):
-   - извоз на предвидувања (xP по коло + детален пресмет),
-   - извоз на тимот на менаџерот, кој служи и како шаблон,
-   - увоз на тим: секој ред се проверува, па тимот минува низ истите FPL правила како и API-то.
+   - `ExportController` + `IExcelExportService` (враќа `byte[]`): предвидувања (xP по коло + детален пресмет) и тимот на менаџерот во форматот за увоз.
+   - `ImportController` + `IExcelImportService`: проверка на фајлот (празен, `.xlsx`, до 5 MB), задолжителни колони, проверка на секој ред → `ImportResult<T>` со `ImportError` (ред, колона, порака). Шаблон: `GET /api/import/squads/get-import-template`.
+   - Ако сите редови се валидни, тимот се зачувува преку `ISquadService`, со истите FPL правила како и API-то.
 
 ## Одлуки при дизајнот
 
