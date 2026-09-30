@@ -1,12 +1,73 @@
 using ProektIntegrirani.Domain.Enums;
 using ProektIntegrirani.Domain.ExternalModels;
+using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Domain.ValueObjects;
 
 namespace ProektIntegrirani.Service.Implementation;
 
-// The "Transform" step of the ETL: FPL API codes and units -> domain values.
+// The "Transform" step of the ETL: FPL API models -> domain entities with deterministic Ids.
 public static class FplTransformations
 {
+    public static Club ToClub(FplTeam team)
+    {
+        return new Club
+        {
+            Id = GuidHelper.FromExternalId(nameof(Club), team.Id),
+            FplId = team.Id,
+            Name = team.Name,
+            ShortName = team.ShortName,
+            StrengthHome = ToStrength(team.StrengthOverallHome),
+            StrengthAway = ToStrength(team.StrengthOverallAway)
+        };
+    }
+
+    public static Gameweek ToGameweek(FplEvent fplEvent)
+    {
+        return new Gameweek
+        {
+            Id = GuidHelper.FromExternalId(nameof(Gameweek), fplEvent.Id),
+            Number = fplEvent.Id,
+            Deadline = fplEvent.DeadlineTime.ToUniversalTime(),
+            IsFinished = fplEvent.Finished
+        };
+    }
+
+    public static Player ToPlayer(FplElement element)
+    {
+        return new Player
+        {
+            Id = GuidHelper.FromExternalId(nameof(Player), element.Id),
+            FplId = element.Id,
+            FirstName = element.FirstName,
+            LastName = element.SecondName,
+            WebName = element.WebName,
+            Position = ToPosition(element.ElementType),
+            Price = ToMillions(element.NowCost),
+            Status = ToPlayerStatus(element.Status),
+            ChanceOfPlaying = element.ChanceOfPlayingNextRound,
+            News = ToNews(element.News),
+            ClubId = GuidHelper.FromExternalId(nameof(Club), element.Team),
+            Stats = ToStats(element)
+        };
+    }
+
+    public static Fixture ToFixture(FplFixture fixture)
+    {
+        return new Fixture
+        {
+            Id = GuidHelper.FromExternalId(nameof(Fixture), fixture.Id),
+            FplId = fixture.Id,
+            // A postponed fixture has no gameweek until FPL reschedules it.
+            GameweekId = fixture.Event is { } number ? GuidHelper.FromExternalId(nameof(Gameweek), number) : null,
+            HomeClubId = GuidHelper.FromExternalId(nameof(Club), fixture.TeamH),
+            AwayClubId = GuidHelper.FromExternalId(nameof(Club), fixture.TeamA),
+            KickoffTime = fixture.KickoffTime?.ToUniversalTime(),
+            HomeScore = fixture.TeamHScore,
+            AwayScore = fixture.TeamAScore,
+            IsFinished = fixture.Finished
+        };
+    }
+
     public static Position ToPosition(int elementType)
     {
         return elementType switch

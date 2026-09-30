@@ -1,5 +1,6 @@
 using ProektIntegrirani.Domain.Dto;
 using ProektIntegrirani.Domain.Exceptions;
+using ProektIntegrirani.Domain.ExternalModels;
 using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Interface;
@@ -35,7 +36,7 @@ public class ManagerService : IManagerService
     {
         await EnsureEntryIdIsFreeAsync(dto.FplEntryId);
 
-        var manager = new Manager();
+        var manager = new Manager { Id = GuidHelper.FromExternalId(nameof(Manager), dto.FplEntryId) };
         Apply(manager, dto);
         return await _repository.InsertAsync(manager);
     }
@@ -43,9 +44,10 @@ public class ManagerService : IManagerService
     public async Task<Manager> UpdateAsync(Guid id, ManagerDto dto)
     {
         var manager = await GetByIdAsync(id);
+        // The external key determines the Id (GuidHelper), so it cannot change after creation.
         if (manager.FplEntryId != dto.FplEntryId)
         {
-            await EnsureEntryIdIsFreeAsync(dto.FplEntryId);
+            throw new BusinessRuleException("The FPL entry id of an existing manager cannot be changed.");
         }
 
         Apply(manager, dto);

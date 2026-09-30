@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ProektIntegrirani.Domain.Dto;
 using ProektIntegrirani.Domain.Exceptions;
+using ProektIntegrirani.Domain.ExternalModels;
 using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Interface;
@@ -47,7 +48,7 @@ public class FixtureService : IFixtureService
         await EnsureFplIdIsFreeAsync(dto.FplId);
         await ValidateRelationsAsync(dto);
 
-        var fixture = new Fixture();
+        var fixture = new Fixture { Id = GuidHelper.FromExternalId(nameof(Fixture), dto.FplId) };
         Apply(fixture, dto);
         await _repository.InsertAsync(fixture);
         return await GetByIdAsync(fixture.Id);
@@ -56,9 +57,10 @@ public class FixtureService : IFixtureService
     public async Task<Fixture> UpdateAsync(Guid id, FixtureDto dto)
     {
         var fixture = await GetByIdAsync(id);
+        // The external key determines the Id (GuidHelper), so it cannot change after creation.
         if (fixture.FplId != dto.FplId)
         {
-            await EnsureFplIdIsFreeAsync(dto.FplId);
+            throw new BusinessRuleException("The FPL id of an existing fixture cannot be changed.");
         }
 
         await ValidateRelationsAsync(dto);

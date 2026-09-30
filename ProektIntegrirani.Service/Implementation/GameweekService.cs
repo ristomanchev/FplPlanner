@@ -1,5 +1,6 @@
 using ProektIntegrirani.Domain.Dto;
 using ProektIntegrirani.Domain.Exceptions;
+using ProektIntegrirani.Domain.ExternalModels;
 using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Interface;
@@ -63,7 +64,7 @@ public class GameweekService : IGameweekService
     {
         await EnsureNumberIsFreeAsync(dto.Number);
 
-        var gameweek = new Gameweek();
+        var gameweek = new Gameweek { Id = GuidHelper.FromExternalId(nameof(Gameweek), dto.Number) };
         Apply(gameweek, dto);
         return await _repository.InsertAsync(gameweek);
     }
@@ -71,9 +72,10 @@ public class GameweekService : IGameweekService
     public async Task<Gameweek> UpdateAsync(Guid id, GameweekDto dto)
     {
         var gameweek = await GetByIdAsync(id);
+        // The external key determines the Id (GuidHelper), so it cannot change after creation.
         if (gameweek.Number != dto.Number)
         {
-            await EnsureNumberIsFreeAsync(dto.Number);
+            throw new BusinessRuleException("The number of an existing gameweek cannot be changed.");
         }
 
         Apply(gameweek, dto);

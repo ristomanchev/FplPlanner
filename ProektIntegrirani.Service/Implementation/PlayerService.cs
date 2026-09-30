@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ProektIntegrirani.Domain.Dto;
 using ProektIntegrirani.Domain.Exceptions;
+using ProektIntegrirani.Domain.ExternalModels;
 using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Interface;
@@ -63,7 +64,7 @@ public class PlayerService : IPlayerService
         await EnsureFplIdIsFreeAsync(dto.FplId);
         await EnsureClubExistsAsync(dto.ClubId);
 
-        var player = new Player();
+        var player = new Player { Id = GuidHelper.FromExternalId(nameof(Player), dto.FplId) };
         Apply(player, dto);
         await _repository.InsertAsync(player);
 
@@ -74,9 +75,10 @@ public class PlayerService : IPlayerService
     public async Task<Player> UpdateAsync(Guid id, PlayerDto dto)
     {
         var player = await GetByIdAsync(id);
+        // The external key determines the Id (GuidHelper), so it cannot change after creation.
         if (player.FplId != dto.FplId)
         {
-            await EnsureFplIdIsFreeAsync(dto.FplId);
+            throw new BusinessRuleException("The FPL id of an existing player cannot be changed.");
         }
 
         await EnsureClubExistsAsync(dto.ClubId);

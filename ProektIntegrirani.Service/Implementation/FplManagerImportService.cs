@@ -1,4 +1,5 @@
 using ProektIntegrirani.Domain.Exceptions;
+using ProektIntegrirani.Domain.ExternalModels;
 using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Interface;
@@ -52,6 +53,7 @@ public class FplManagerImportService : IFplManagerImportService
         {
             manager = new Manager
             {
+                Id = GuidHelper.FromExternalId(nameof(Manager), entryId),
                 FplEntryId = entryId,
                 TeamName = teamName,
                 ManagerName = managerName,

@@ -15,6 +15,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PlayerPrediction> PlayerPredictions { get; set; }
     public DbSet<ApiClient> ApiClients { get; set; }
     public DbSet<InboundSquadEntry> InboundSquadEntries { get; set; }
+    public DbSet<EtlSyncLog> EtlSyncLogs { get; set; }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {

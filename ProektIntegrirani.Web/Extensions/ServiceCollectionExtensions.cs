@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
     {
         // One open-generic registration covers IRepository<Club>, IRepository<Player>, ...
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+        services.AddScoped<IFplDataRepository, FplDataRepository>();
         return services;
     }
 
@@ -71,7 +72,7 @@ public static class ServiceCollectionExtensions
             client.DefaultRequestHeaders.UserAgent.ParseAdd("FplPlanner/1.0");
         });
 
-        services.AddHostedService<FplSyncBackgroundService>();
+        services.AddHostedService<FplEtlBackgroundService>();
         return services;
     }
 

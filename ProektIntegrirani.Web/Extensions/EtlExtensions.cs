@@ -1,19 +1,29 @@
-using ProektIntegrirani.Domain.Dto;
+using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Web.Response;
 
 namespace ProektIntegrirani.Web.Extensions;
 
 public static class EtlExtensions
 {
-    public static EtlResultResponse ToResponse(this EtlResultDto result)
+    public static EtlSyncLogResponse ToResponse(this EtlSyncLog log)
     {
-        return new EtlResultResponse(
-            new EtlEntityCountResponse(result.ClubsInserted, result.ClubsUpdated),
-            new EtlEntityCountResponse(result.GameweeksInserted, result.GameweeksUpdated),
-            new EtlEntityCountResponse(result.PlayersInserted, result.PlayersUpdated),
-            new EtlEntityCountResponse(result.FixturesInserted, result.FixturesUpdated),
-            result.PredictionRecalculationQueued,
-            result.StartedAt,
-            Math.Round((result.FinishedAt - result.StartedAt).TotalSeconds, 2));
+        return new EtlSyncLogResponse(
+            log.Id,
+            log.JobName,
+            log.StartedAt,
+            log.CompletedAt,
+            log.CompletedAt is { } completed ? Math.Round((completed - log.StartedAt).TotalSeconds, 2) : null,
+            log.Success,
+            log.ErrorMessage,
+            log.ClubsLoaded,
+            log.GameweeksLoaded,
+            log.PlayersLoaded,
+            log.FixturesLoaded,
+            log.PredictionRecalculationQueued);
+    }
+
+    public static List<EtlSyncLogResponse> ToResponse(this IEnumerable<EtlSyncLog> logs)
+    {
+        return logs.Select(l => l.ToResponse()).ToList();
     }
 }

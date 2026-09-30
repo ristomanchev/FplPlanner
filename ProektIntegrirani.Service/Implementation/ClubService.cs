@@ -1,5 +1,6 @@
 using ProektIntegrirani.Domain.Dto;
 using ProektIntegrirani.Domain.Exceptions;
+using ProektIntegrirani.Domain.ExternalModels;
 using ProektIntegrirani.Domain.Models;
 using ProektIntegrirani.Repository.Interface;
 using ProektIntegrirani.Service.Interface;
@@ -41,7 +42,7 @@ public class ClubService : IClubService
     {
         await EnsureFplIdIsFreeAsync(dto.FplId);
 
-        var club = new Club();
+        var club = new Club { Id = GuidHelper.FromExternalId(nameof(Club), dto.FplId) };
         Apply(club, dto);
         return await _repository.InsertAsync(club);
     }
@@ -49,9 +50,10 @@ public class ClubService : IClubService
     public async Task<Club> UpdateAsync(Guid id, ClubDto dto)
     {
         var club = await GetByIdAsync(id);
+        // The external key determines the Id (GuidHelper), so it cannot change after creation.
         if (club.FplId != dto.FplId)
         {
-            await EnsureFplIdIsFreeAsync(dto.FplId);
+            throw new BusinessRuleException("The FPL id of an existing club cannot be changed.");
         }
 
         Apply(club, dto);
