@@ -68,7 +68,19 @@ dotnet run --project FplPlanner.Web --launch-profile http
 
 **Тестови:** `dotnet test`
 
-Во Development мејловите одат во локалниот Mailpit (`appsettings.Development.json`). За вистински мејлови се пополнува секцијата `EmailSettings` во `appsettings.json` со Gmail адреса и App Password. Лозинката не се комитира; се чува локално или со `dotnet user-secrets`.
+Во Development мејловите одат во локалниот Mailpit (`appsettings.Development.json`). За вистински мејлови преку Gmail треба App Password (Google сметка → Security → 2-Step Verification → App passwords). Лозинката не оди во репото, туку во `dotnet user-secrets`, кои ги надминуваат поставките од `appsettings` фајловите:
+
+```bash
+cd FplPlanner.Web
+dotnet user-secrets set "EmailSettings:SmtpHost" "smtp.gmail.com"
+dotnet user-secrets set "EmailSettings:SmtpPort" "587"
+dotnet user-secrets set "EmailSettings:UseSsl" "true"
+dotnet user-secrets set "EmailSettings:Username" "tvoja.adresa@gmail.com"
+dotnet user-secrets set "EmailSettings:FromAddress" "tvoja.adresa@gmail.com"
+dotnet user-secrets set "EmailSettings:Password" "xxxx xxxx xxxx xxxx"
+```
+
+Назад кон Mailpit: `dotnet user-secrets clear`.
 
 Апликацијата работи и без RabbitMQ: податоците се зачувуваат, а предвидувањата се пресметуваат рачно со `POST /api/playerpredictions/recalculate`.
 
