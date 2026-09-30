@@ -1,0 +1,209 @@
+:root {
+    --bg: #f4f2f7;
+    --surface: #ffffff;
+    --text: #1d1a24;
+    --muted: #6b6578;
+    --border: #e3dfea;
+    --brand: #37003c;
+    --accent: #00a86b;
+    --danger: #c62828;
+    --pitch: #2e7d4f;
+    --pitch-line: rgba(255, 255, 255, 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #141218;
+        --surface: #1f1c25;
+        --text: #ece9f1;
+        --muted: #a59fb3;
+        --border: #34303d;
+        --brand: #a64dff;
+        --accent: #2fd08f;
+        --danger: #ff6b6b;
+        --pitch: #1f5c3a;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 24px;
+    background: #37003c;
+    color: #fff;
+    flex-wrap: wrap;
+}
+
+.brand { font-weight: 700; font-size: 1.2rem; }
+.topbar .muted { color: #d9c9e0; margin-left: auto; }
+
+.tabs { display: flex; gap: 4px; }
+.tab {
+    background: transparent;
+    color: #e8dcef;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+.tab.active, .tab:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+
+main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h2 { font-size: 1.1rem; margin: 0 0 8px; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-2 > .card { margin-bottom: 0; }
+.grid-2 + .card { margin-top: 16px; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.toolbar, .inline-form, .actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.actions { margin-top: 12px; }
+label { font-size: 0.9rem; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+
+input, select {
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+button, .button {
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--brand);
+    background: var(--brand);
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+}
+button.secondary, .button.secondary { background: transparent; color: var(--brand); }
+button:disabled { opacity: 0.5; cursor: wait; }
+.file-button { color: var(--brand); }
+
+.muted { color: var(--muted); }
+
+.badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--border);
+    white-space: nowrap;
+}
+.badge.ok { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+.badge.bad { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+
+.stats { display: flex; gap: 24px; flex-wrap: wrap; margin: 8px 0; }
+.stat .value { font-size: 1.3rem; font-weight: 700; }
+.stat .label { font-size: 0.8rem; color: var(--muted); }
+
+.errors { color: var(--danger); margin: 8px 0; padding-left: 20px; }
+.errors:empty { display: none; }
+
+/* Pitch with the starting XI in formation rows */
+.pitch {
+    background: var(--pitch);
+    background-image: linear-gradient(var(--pitch-line), var(--pitch-line));
+    background-size: 100% 1px;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 10px;
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.pitch-row { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+
+.player {
+    width: 110px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #1d1a24;
+    border-radius: 8px;
+    padding: 6px;
+    text-align: center;
+    position: relative;
+    font-size: 0.85rem;
+}
+.player .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player .meta { color: #6b6578; font-size: 0.75rem; }
+.player .xp { font-weight: 700; color: #37003c; }
+.player.flagged { outline: 2px solid #f4a100; }
+.player .armband {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #1d1a24;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 22px;
+}
+
+.bench { display: flex; justify-content: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.bench .player { background: var(--border); color: var(--text); }
+.bench .player .meta { color: var(--muted); }
+.bench .player .xp { color: var(--brand); }
+
+.transfer {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+}
+.transfer:last-child { border-bottom: none; }
+.transfer .out { color: var(--danger); }
+.transfer .in { color: var(--accent); font-weight: 600; }
+.plan-summary { margin: 8px 0; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.table th, .table td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.table th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+.table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.table tbody tr:hover { background: color-mix(in srgb, var(--brand) 6%, transparent); }
+.pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 12px; }
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1d1a24;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    max-width: 90vw;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    white-space: pre-line;
+}
+.toast.error { background: var(--danger); }

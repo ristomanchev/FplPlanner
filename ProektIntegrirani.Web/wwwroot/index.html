@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="mk">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FPL Planner</title>
+    <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">FPL Planner</div>
+    <nav class="tabs">
+        <button class="tab active" data-tab="manager">Менаџер</button>
+        <button class="tab" data-tab="players">Играчи</button>
+        <button class="tab" data-tab="data">Податоци</button>
+    </nav>
+    <div id="next-gameweek" class="muted"></div>
+</header>
+
+<main>
+    <!-- Manager: squad, lineup, transfers, report, Excel -->
+    <section id="tab-manager" class="tab-panel">
+        <div class="card toolbar">
+            <label>Менаџер
+                <select id="manager-select"></select>
+            </label>
+            <form id="import-form" class="inline-form">
+                <input id="import-entry" type="number" min="1" placeholder="FPL entry id" required>
+                <input id="import-email" type="email" placeholder="email (опционално)">
+                <button type="submit">Увези од FPL</button>
+            </form>
+        </div>
+
+        <div id="manager-empty" class="card muted">Избери менаџер или увези еден со неговото FPL entry id.</div>
+
+        <div id="manager-view" hidden>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 id="squad-title"></h2>
+                        <span id="squad-validation" class="badge"></span>
+                    </div>
+                    <div id="squad-stats" class="stats"></div>
+                    <ul id="squad-errors" class="errors"></ul>
+                    <div class="actions">
+                        <button id="send-report">Прати неделен извештај</button>
+                        <a id="export-squad" class="button secondary">Симни тим (.xlsx)</a>
+                        <label class="button secondary file-button">Увези тим (.xlsx)
+                            <input id="import-squad-file" type="file" accept=".xlsx" hidden>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Предлог трансфери</h2>
+                        <label class="muted">Кола
+                            <select id="transfer-horizon">
+                                <option value="1">1</option>
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="8">8</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div id="transfers"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 id="lineup-title">Најдобра постава</h2>
+                    <span id="lineup-points" class="badge"></span>
+                </div>
+                <div id="pitch" class="pitch"></div>
+                <div id="bench" class="bench"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Players: predictions table -->
+    <section id="tab-players" class="tab-panel" hidden>
+        <div class="card toolbar">
+            <label>Позиција
+                <select id="players-position">
+                    <option value="">Сите</option>
+                    <option value="Goalkeeper">Голман</option>
+                    <option value="Defender">Одбрана</option>
+                    <option value="Midfielder">Среден ред</option>
+                    <option value="Forward">Напад</option>
+                </select>
+            </label>
+            <a class="button secondary" href="/api/export/predictions?horizon=6">Симни предвидувања (.xlsx)</a>
+        </div>
+        <div class="card">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>#</th><th>Играч</th><th>Клуб</th><th>Позиција</th><th class="num">Цена</th>
+                    <th class="num">Минути</th><th class="num">Голови</th><th class="num">Асист.</th>
+                    <th class="num">Чиста мрежа</th><th class="num">Бонус</th><th class="num">xP</th>
+                </tr>
+                </thead>
+                <tbody id="players-body"></tbody>
+            </table>
+            <div class="pager">
+                <button id="players-prev" class="secondary">‹ Претходни</button>
+                <span id="players-page" class="muted"></span>
+                <button id="players-next" class="secondary">Следни ›</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Data: ETL and prediction model -->
+    <section id="tab-data" class="tab-panel" hidden>
+        <div class="card toolbar">
+            <button id="run-etl">Повлечи податоци од FPL (ETL)</button>
+            <button id="recalculate" class="secondary">Пресметај предвидувања</button>
+            <span id="data-status" class="muted"></span>
+        </div>
+        <div class="card">
+            <h2>ETL дневник</h2>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Почеток</th><th>Статус</th><th class="num">Клубови</th><th class="num">Играчи</th>
+                    <th class="num">Натпревари</th><th class="num">Траење</th><th>RabbitMQ</th><th>Грешка</th>
+                </tr>
+                </thead>
+                <tbody id="etl-logs"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

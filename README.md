@@ -27,7 +27,8 @@ dotnet run --project ProektIntegrirani.Web --launch-profile http
 
 Во Development мејловите одат во локалниот Mailpit (`appsettings.Development.json`). За вистински мејлови се пополнуваат Gmail поставките во `EmailSettings` во `appsettings.json` (App Password).
 
-- API UI (Scalar): http://localhost:5092/scalar
+- **UI:** http://localhost:5092. Менаџер (тим на терен, капитен, трансфери, извештај, Excel), Играчи (предвидувања), Податоци (ETL, дневник).
+- API документација (Scalar): http://localhost:5092/scalar
 - При старт апликацијата сама ги повлекува податоците од FPL (ETL). Потоа преку RabbitMQ ги пресметува предвидувањата.
 - Тестови: `dotnet test`
 
@@ -159,7 +160,7 @@ GET  /api/export/predictions                        # .xlsx
 | API клучевите се чуваат како SHA-256 hash | Како лозинките: ако базата протече, клучевите не се употребливи. Клучот се прикажува само еднаш. |
 | Middleware прави `return` по секој 401 и го користи `IApiClientService` | Невалидно барање никогаш не стига до контролерот. Web слојот не пристапува директно до `DbContext`. |
 | Rate limit по клиент (`RequestsPerMinute`) | Различни партнери можат да имаат различен лимит, наместо еден фиксен број за сите. |
-| Web е чист API | Frontend не е задолжителен. Scalar UI за тестирање. |
+| Едноставен UI во `wwwroot` (HTML + CSS + JavaScript без framework) | Frontend не е задолжителен, па нема посебен проект ни build чекор. Истата апликација ги служи статичките фајлови, а тие го повикуваат постојното REST API. |
 
 ## Познати ограничувања
 

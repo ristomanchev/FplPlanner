@@ -53,6 +53,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Simple UI from wwwroot (index.html + plain JS) that calls the API below.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthorization();
 
 // Order matters: the middleware identifies the ApiClient that the rate limiter then partitions by.
